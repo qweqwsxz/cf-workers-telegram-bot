@@ -9,7 +9,7 @@ export default class TelegramInlineQueryResultArticle extends TelegramInlineQuer
 		super('article');
 		this.title = data.title ?? '';
 		this.input_message_content = {
-			message_text: data.content.toString(),
+			message_text: data.content,
 			parse_mode: data.parse_mode ?? '',
 		};
 		this.thumb_url = data.thumb_url ?? '';

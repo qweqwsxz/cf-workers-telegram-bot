@@ -77,7 +77,7 @@ export default class TelegramBot {
     }
 
     // Then check if it's a command starting with /
-    if (args[0] && args[0].startsWith('/')) {
+    if (args[0].startsWith('/')) {
       const command = args[0].substring(1, args[0].lastIndexOf('@') > -1 ? args[0].lastIndexOf('@') : args[0].length);
       return command in this.commands ? command : this.defaultCommand;
     }
