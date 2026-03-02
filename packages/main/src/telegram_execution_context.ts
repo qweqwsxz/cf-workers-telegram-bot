@@ -176,6 +176,24 @@ export default class TelegramExecutionContext {
     return null;
   }
 
+
+  /**
+   * Reply to the last message with a stream of text
+   * @param message - text to reply with
+   * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
+   * @param options - any additional options to pass to sendMessage
+   * @returns Promise with the API response
+   */
+  async streamReply(message: string, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
+    return await this.api.sendMessageDraft(this.bot.api.toString(), {
+      ...options,
+      chat_id: this.getChatId(),
+      reply_to_message_id: this.getMessageId(),
+      text: message,
+      parse_mode,
+    });
+  }
+
   /**
    * Reply to the last message with text
    * @param message - text to reply with

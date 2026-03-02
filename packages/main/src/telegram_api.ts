@@ -233,4 +233,12 @@ export default class TelegramApi {
     const url = this.getApiUrl(botApi, 'editMessageText', data);
     return await fetch(url);
   }
+
+  async sendMessageDraft(
+    botApi: string,
+    data: SendMessageParams,
+  ): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'sendMessageDraft', data);
+    return await fetch(url);
+  }
 }
