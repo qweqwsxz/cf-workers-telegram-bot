@@ -34,17 +34,68 @@ function wrapPromise<T>(func: promiseFunc<T>, time = 1000) {
  */
 async function markdownToHtml(s: string): Promise<string> {
 	marked.setOptions(marked.getDefaults());
-	const parsed = await marked.parse(s) as string | { toString(): string };
+	const parsed = (await marked.parse(s)) as string | { toString(): string };
 	const parsedString = typeof parsed === 'string' ? parsed : parsed.toString();
 	const tagsToRemove = ['p', 'ol', 'ul', 'li', 'h1', 'h2', 'h3'];
 	const tagPattern = new RegExp(tagsToRemove.map((tag) => `<${tag}>|</${tag}>`).join('|'), 'g');
 	return parsedString.replace(tagPattern, '');
 }
 
+/**
+ * Stream AI response and send periodic updates via bot.streamReply
+ * @param bot - the telegram execution context
+ * @param env - the environment
+ * @param model - the AI model to use
+ * @param messages - the messages to send
+ * @returns the full response string
+ */
+async function streamAiResponse(
+	bot: TelegramExecutionContext,
+	env: Environment,
+	model: string,
+	messages: { role: string; content: string }[],
+): Promise<string> {
+	// @ts-expect-error broken bindings
+	const response = (await env.AI.run(model, {
+		messages,
+		stream: true,
+	})) as ReadableStream;
+
+	const reader = response.getReader();
+	const decoder = new TextDecoder();
+	let fullResponse = '';
+	let lastUpdate = Date.now();
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+
+		const chunk = decoder.decode(value);
+		const lines = chunk.split('\n');
+
+		for (const line of lines) {
+			if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+				try {
+					const data = JSON.parse(line.slice(6)) as { response: string };
+					fullResponse += data.response;
+
+					if (Date.now() - lastUpdate > 5000) {
+						await bot.streamReply(await markdownToHtml(fullResponse), 'HTML');
+						lastUpdate = Date.now();
+					}
+				} catch (e) {
+					console.error('Error parsing AI stream:', e);
+				}
+			}
+		}
+	}
+	return fullResponse;
+}
+
 // Constants for system prompts
 const SYSTEM_PROMPTS = {
 	TUX_ROBOT: 'You are a friendly assistant named TuxRobot. Use lots of emojis in your responses.',
-	SEAN: 'You are a friendly person named Sean. Sometimes just acknowledge messages with okay. You are working on coding a cool telegram bot. You are 26 years old and from Toronto, Canada.',
+	SEAN: 'You are a friendly person named Sean. Sometimes just acknowledge messages with okay. You are working on coding a cool telegram bot.',
 };
 
 // AI model constants
@@ -122,7 +173,7 @@ export default {
 				.on(':message', async (bot: TelegramExecutionContext) => {
 					switch (bot.update_type) {
 						case 'message': {
-							await bot.sendTyping();
+							// await bot.sendTyping();
 							const prompt = bot.update.message?.text?.toString() ?? '';
 
 							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE userId=?')
@@ -138,25 +189,13 @@ export default {
 
 							try {
 								console.log('Processing text message:', prompt);
-								// @ts-expect-error broken bindings
-								const response = await env.AI.run(AI_MODELS.LLAMA, { messages });
+								const response = await streamAiResponse(bot, env, AI_MODELS.LLAMA, messages);
 
-								if ('response' in response && response.response) {
-									await bot.reply(
-										await markdownToHtml(
-											typeof response.response === 'string' 
-												? response.response 
-												: JSON.stringify(response.response)
-										), 
-										'HTML'
-									);
+								if (response) {
+									await bot.reply(await markdownToHtml(response), 'HTML');
 
 									await env.DB.prepare('INSERT INTO Messages (id, userId, content) VALUES (?, ?, ?)')
-										.bind(
-											crypto.randomUUID(), 
-											bot.update.message?.from.id, 
-											`'[INST] ${prompt} [/INST] \n ${typeof response.response === 'string' ? response.response : JSON.stringify(response.response)}'`
-										)
+										.bind(crypto.randomUUID(), bot.update.message?.from.id, `'[INST] ${prompt} [/INST] \n ${response}'`)
 										.run();
 								}
 							} catch (e) {

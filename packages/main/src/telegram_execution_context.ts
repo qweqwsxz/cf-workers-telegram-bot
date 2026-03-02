@@ -188,7 +188,6 @@ export default class TelegramExecutionContext {
     return await this.api.sendMessageDraft(this.bot.api.toString(), {
       ...options,
       chat_id: this.getChatId(),
-      reply_to_message_id: this.getMessageId(),
       text: message,
       parse_mode,
     });
