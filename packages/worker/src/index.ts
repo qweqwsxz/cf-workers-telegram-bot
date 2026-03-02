@@ -64,7 +64,7 @@ async function streamAiResponse(
 	const reader = response.getReader();
 	const decoder = new TextDecoder();
 	let fullResponse = '';
-	let lastUpdate = Date.now();
+	let lastUpdate = 0;
 
 	while (true) {
 		const { done, value } = await reader.read();
