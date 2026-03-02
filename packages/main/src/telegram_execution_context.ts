@@ -184,12 +184,13 @@ export default class TelegramExecutionContext {
    * @param options - any additional options to pass to sendMessage
    * @returns Promise with the API response
    */
-  async streamReply(message: string, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
+  async streamReply(message: string, draft_id: number, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
     return await this.api.sendMessageDraft(this.bot.api.toString(), {
       ...options,
       chat_id: this.getChatId(),
       text: message,
       parse_mode,
+      draft_id,
     });
   }
 
@@ -200,15 +201,23 @@ export default class TelegramExecutionContext {
    * @param options - any additional options to pass to sendMessage
    * @returns Promise with the API response
    */
-  async reply(message: string, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
+  async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
     switch (this.update_type) {
       case 'message':
       case 'photo':
       case 'document':
+        if (reply) {
+          return await this.api.sendMessage(this.bot.api.toString(), {
+            ...options,
+            chat_id: this.getChatId(),
+            reply_to_message_id: this.getMessageId(),
+            text: message,
+            parse_mode,
+          });
+        }
         return await this.api.sendMessage(this.bot.api.toString(), {
           ...options,
           chat_id: this.getChatId(),
-          reply_to_message_id: this.getMessageId(),
           text: message,
           parse_mode,
         });

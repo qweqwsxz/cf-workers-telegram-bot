@@ -63,6 +63,7 @@ async function streamAiResponse(
 
 	const reader = response.getReader();
 	const decoder = new TextDecoder();
+	const draft_id = Math.floor(Math.random() * 1000000) + 1;
 	let fullResponse = '';
 	let lastUpdate = 0;
 
@@ -76,12 +77,14 @@ async function streamAiResponse(
 		for (const line of lines) {
 			if (line.startsWith('data: ') && line !== 'data: [DONE]') {
 				try {
-					const data = JSON.parse(line.slice(6)) as { response: string };
-					fullResponse += data.response;
+					const data = JSON.parse(line.slice(6)) as { response: string | undefined };
+					if (data.response) {
+						fullResponse += data.response;
 
-					if (Date.now() - lastUpdate > 5000) {
-						await bot.streamReply(await markdownToHtml(fullResponse), 'HTML');
-						lastUpdate = Date.now();
+						if (Date.now() - lastUpdate > 5000) {
+							const streamResponse = await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
+							lastUpdate = Date.now();
+						}
 					}
 				} catch (e) {
 					console.error('Error parsing AI stream:', e);
@@ -89,7 +92,7 @@ async function streamAiResponse(
 			}
 		}
 	}
-	return fullResponse;
+	return fullResponse.replace(/^\[INST\]\s*/, '');
 }
 
 // Constants for system prompts
@@ -195,7 +198,7 @@ export default {
 									await bot.reply(await markdownToHtml(response), 'HTML');
 
 									await env.DB.prepare('INSERT INTO Messages (id, userId, content) VALUES (?, ?, ?)')
-										.bind(crypto.randomUUID(), bot.update.message?.from.id, `'[INST] ${prompt} [/INST] \n ${response}'`)
+										.bind(crypto.randomUUID(), bot.update.message?.from.id, `[INST] ${prompt} [/INST] \n ${response}`)
 										.run();
 								}
 							} catch (e) {

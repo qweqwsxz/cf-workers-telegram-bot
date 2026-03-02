@@ -19,6 +19,11 @@ interface SendMessageParams extends TelegramApiBaseParams {
   reply_markup?: object;
 }
 
+/** Interface for message draft parameters */
+interface SendMessageDraftParams extends SendMessageParams {
+  draft_id: number;
+}
+
 /** Interface for photo parameters */
 interface SendPhotoParams extends TelegramApiBaseParams {
   photo: string;
@@ -236,7 +241,7 @@ export default class TelegramApi {
 
   async sendMessageDraft(
     botApi: string,
-    data: SendMessageParams,
+    data: SendMessageDraftParams,
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendMessageDraft', data);
     return await fetch(url);
