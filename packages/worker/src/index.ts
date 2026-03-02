@@ -92,7 +92,7 @@ async function streamAiResponse(
 			}
 		}
 	}
-	return fullResponse.replace(/^\[INST\]\s*/, '');
+	return fullResponse;
 }
 
 // Constants for system prompts
