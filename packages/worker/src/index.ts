@@ -59,7 +59,7 @@ async function streamAiResponse(
 	const response = (await env.AI.run(model, {
 		messages,
 		stream: true,
-	})) as ReadableStream;
+	}));
 
 	const reader = response.getReader();
 	const decoder = new TextDecoder();
@@ -67,11 +67,11 @@ async function streamAiResponse(
 	let fullResponse = '';
 	let lastUpdate = 0;
 
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
+	for (;;) {
+		const result = (await reader.read()) as ReadableStreamReadResult<Uint8Array>;
+		if (result.done) break;
 
-		const chunk = decoder.decode(value);
+		const chunk = decoder.decode(result.value);
 		const lines = chunk.split('\n');
 
 		for (const line of lines) {
@@ -82,7 +82,8 @@ async function streamAiResponse(
 						fullResponse += data.response;
 
 						if (Date.now() - lastUpdate > 5000) {
-							const streamResponse = await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
+							// @ts-expect-error broken bindings
+							await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
 							lastUpdate = Date.now();
 						}
 					}
