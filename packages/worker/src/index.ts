@@ -41,6 +41,18 @@ async function markdownToHtml(s: string): Promise<string> {
 	return parsedString.replace(tagPattern, '');
 }
 
+interface AiResponse {
+	choices?: {
+		delta?: {
+			content?: string;
+		};
+		message?: {
+			content?: string;
+		};
+	}[];
+	response?: string;
+}
+
 async function streamAiResponseGemma(
 	bot: TelegramExecutionContext,
 	env: Environment,
@@ -53,7 +65,7 @@ async function streamAiResponseGemma(
 		messages,
 		stream: true,
 		max_completion_tokens
-	})) as ReadableStream;
+	})) as ReadableStream<Uint8Array>;
 
 	const reader = response.getReader();
 	const decoder = new TextDecoder();
@@ -67,8 +79,8 @@ async function streamAiResponseGemma(
 		if (done) break;
 
 		buffer += decoder.decode(value, { stream: true });
-		let lines = buffer.split('\n');
-		buffer = lines.pop() || '';
+		const lines = buffer.split('\n');
+		buffer = lines.pop() ?? '';
 
 		for (const line of lines) {
 			const trimmedLine = line.trim();
@@ -76,7 +88,7 @@ async function streamAiResponseGemma(
 
 			if (trimmedLine.startsWith('data: ')) {
 				try {
-					const data = JSON.parse(trimmedLine.slice(6));
+					const data = JSON.parse(trimmedLine.slice(6)) as AiResponse;
 					
 					// Use the new OpenAI-style path or the legacy response key
 					const content = data.choices?.[0]?.delta?.content ?? data.response ?? '';
@@ -110,10 +122,12 @@ async function streamAiResponseGemma(
 			const trimmedLine = buffer.trim();
 			if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
 				try {
-					const data = JSON.parse(trimmedLine.slice(6));
+					const data = JSON.parse(trimmedLine.slice(6)) as AiResponse;
 					const content = data.choices?.[0]?.delta?.content ?? data.response ?? '';
 					if (content) fullResponse += content;
-				} catch(e) {}
+				} catch {
+					// Ignore parse errors
+				}
 			}
 		}
 		
@@ -341,9 +355,8 @@ export default {
 							try {
 								await bot.sendTyping();
 								// @ts-expect-error broken bindings
-								const response = await env.AI.run(AI_MODELS.GEMMA, { messages });
+								const response = (await env.AI.run(AI_MODELS.GEMMA, { messages })) as AiResponse;
 
-								// @ts-expect-error broken bindings
 								const content = response.choices?.[0]?.message?.content ?? response.response ?? '';
 
 								if (content) {
@@ -351,7 +364,7 @@ export default {
 								}
 							} catch (e) {
 								console.error('Error in guest message handler:', e);
-								await bot.reply(`Error: ${e as string}`);
+								await bot.reply(`Error: ${e instanceof Error ? e.message : String(e)}`);
 							}
 							break;
 						}
@@ -371,20 +384,19 @@ export default {
 								const messages = [{ role: 'system', content: SYSTEM_PROMPTS.SEAN }, ...messageHistory, { role: 'user', content: prompt }];
 
 								try {
-									let response;
+									let response: AiResponse;
 									
 									if (fileId) {
 										const fileResponse = await bot.getFile(fileId);
 										const blob = await fileResponse.arrayBuffer();
 										// @ts-expect-error broken bindings
-										response = await env.AI.run(AI_MODELS.LLAMA, { messages, image: [...new Uint8Array(blob)] });
+										response = (await env.AI.run(AI_MODELS.LLAMA, { messages, image: [...new Uint8Array(blob)] }));
 									} else {
 										// @ts-expect-error broken bindings
-										response = await env.AI.run(AI_MODELS.LLAMA, { messages });
+										response = (await env.AI.run(AI_MODELS.LLAMA, { messages }));
 									}
 
-								// @ts-expect-error broken bindings
-									if ('response' in response && response.response) {
+									if (response.response) {
 										await bot.reply(
 											await markdownToHtml(
 												typeof response.response === 'string' 
@@ -404,7 +416,7 @@ export default {
 									}
 								} catch (e) {
 									console.error('Error in business message handler:', e);
-									await bot.reply(`Error: ${e as string}`);
+									await bot.reply(`Error: ${e instanceof Error ? e.message : String(e)}`);
 								}
 							}
 							break;
@@ -414,7 +426,7 @@ export default {
 								console.log(JSON.stringify(bot.update));
 							}
 							catch {
-								console.log("couldn't json.stringify update...", `${bot.update}`)
+								console.log("couldn't json.stringify update...", bot.update)
 							}
 							break;
 					}
