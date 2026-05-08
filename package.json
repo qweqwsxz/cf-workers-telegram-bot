@@ -17,13 +17,13 @@
 		"packages/worker"
 	],
 	"devDependencies": {
-		"@typescript-eslint/eslint-plugin": "^8.56.0",
-		"npm-check-updates": "^19.4.1",
-		"typedoc": "^0.28.17"
+		"@typescript-eslint/eslint-plugin": "^8.59.2",
+		"npm-check-updates": "^22.1.1",
+		"typedoc": "^0.28.19"
 	},
 	"version": "",
 	"dependencies": {
-		"@eslint/eslintrc": "^3.3.3",
+		"@eslint/eslintrc": "^3.3.5",
 		"wrangler": "^4.90.0"
 	}
 }
