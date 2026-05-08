@@ -2,7 +2,8 @@
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"moduleResolution": "bundler",
-		"types": ["@cloudflare/workers-types/experimental"]
+		"types": ["@cloudflare/workers-types/experimental"],
+		"rootDir": ".."
 	},
 	"include": ["./**/*.ts", "../src/env.d.ts"]
 }
