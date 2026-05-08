@@ -10,10 +10,9 @@ binding = "AI"
 [observability.logs]
 enabled = true
 
-[[d1_databases]]
-binding = "DB"
-database_name = "llama2"
-database_id = "e24eb37b-6b13-4e84-b1af-63de0dedcc6d"
+[[kv_namespaces]]
+binding = "CONVERSATION_HISTORY"
+id = "7c147881ce7d42b8811bfbf8c38e3ee4"
 
 [[r2_buckets]]
 binding = "R2"

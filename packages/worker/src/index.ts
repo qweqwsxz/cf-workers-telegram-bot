@@ -6,8 +6,8 @@ export interface Environment {
 	SECRET_TELEGRAM_API_TOKEN2: string;
 	SECRET_TELEGRAM_API_TOKEN3: string;
 	AI: Ai;
-	DB: D1Database;
 	R2: R2Bucket;
+	CONVERSATION_HISTORY: KVNamespace;
 }
 
 type promiseFunc<T> = (resolve: (result: T) => void, reject: (e?: Error) => void) => Promise<T>;
@@ -51,6 +51,26 @@ interface AiResponse {
 		};
 	}[];
 	response?: string;
+}
+
+class HistoryManager {
+	constructor(private kv: KVNamespace) {}
+
+	async getHistory(userId: number): Promise<{ role: string; content: string }[]> {
+		const history = await this.kv.get(`history:${userId}`, 'json');
+		return (history as { role: string; content: string }[]) || [];
+	}
+
+	async addMessage(userId: number, prompt: string, response: string) {
+		const history = await this.getHistory(userId);
+		history.push({ role: 'system', content: `[INST] ${prompt} [/INST] \n ${response}` });
+		const trimmedHistory = history.slice(-10);
+		await this.kv.put(`history:${userId}`, JSON.stringify(trimmedHistory), { expirationTtl: 86400 });
+	}
+
+	async clearHistory(userId: number) {
+		await this.kv.delete(`history:${userId}`);
+	}
 }
 
 async function streamAiResponseGemma(
@@ -159,6 +179,7 @@ export default {
 		const tuxrobot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 		const duckduckbot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN2);
 		const translatepartybot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN3);
+		const historyManager = new HistoryManager(env.CONVERSATION_HISTORY);
 
 		await Promise.all([
 			tuxrobot
@@ -214,7 +235,7 @@ export default {
 				})
 				.on('clear', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
-						await env.DB.prepare('DELETE FROM Messages WHERE userId=?').bind(bot.update.message?.from.id).run();
+						await historyManager.clearHistory(bot.update.message!.from.id);
 						await bot.reply('History cleared');
 					}
 					return new Response('ok');
@@ -225,10 +246,7 @@ export default {
 							// await bot.sendTyping();
 							const prompt = bot.update.message?.text?.toString() ?? '';
 
-							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE userId=?')
-								.bind(bot.update.message?.from.id)
-								.all();
-							const messageHistory = results.map((col) => ({ role: 'system', content: col.content as string }));
+							const messageHistory = await historyManager.getHistory(bot.update.message!.from.id);
 
 							const messages = [
 								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
@@ -242,10 +260,7 @@ export default {
 
 								if (response) {
 									await bot.reply(await markdownToHtml(response), 'HTML');
-
-									await env.DB.prepare('INSERT INTO Messages (id, userId, content) VALUES (?, ?, ?)')
-										.bind(crypto.randomUUID(), bot.update.message?.from.id, `[INST] ${prompt} [/INST] \n ${response}`)
-										.run();
+									await historyManager.addMessage(bot.update.message!.from.id, prompt, response);
 								}
 							} catch (e) {
 								console.error('Error in message handler:', e);
@@ -262,10 +277,7 @@ export default {
 
 							console.log('Processing photo:', { fileId, prompt });
 
-							const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE userId=?')
-								.bind(bot.update.message?.from.id)
-								.all();
-							const messageHistory = results.map((col) => ({ role: 'system', content: col.content as string }));
+							const messageHistory = await historyManager.getHistory(bot.update.message!.from.id);
 
 							const messages = [
 								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
@@ -284,22 +296,13 @@ export default {
 
 								// @ts-expect-error broken bindings
 								if ('response' in response && response.response) {
+									const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
 									await bot.reply(
-										await markdownToHtml(
-											typeof response.response === 'string' 
-												? response.response 
-												: JSON.stringify(response.response)
-										), 
+										await markdownToHtml(aiResponse), 
 										'HTML'
 									);
 
-									await env.DB.prepare('INSERT INTO Messages (id, userId, content) VALUES (?, ?, ?)')
-										.bind(
-											crypto.randomUUID(), 
-											bot.update.message?.from.id, 
-											`'[INST] ${prompt} [/INST] \n ${typeof response.response === 'string' ? response.response : JSON.stringify(response.response)}'`
-										)
-										.run();
+									await historyManager.addMessage(bot.update.message!.from.id, prompt, aiResponse);
 								}
 							} catch (e) {
 								console.error('Error in photo handler:', e);
@@ -347,8 +350,10 @@ export default {
 
 						case 'guest_message': {
 							const prompt = bot.update.guest_message?.text?.toString() ?? '';
+							const messageHistory = await historyManager.getHistory(bot.update.guest_message!.from.id);
 							const messages = [
 								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
+								...messageHistory,
 								{ role: 'user', content: prompt },
 							];
 
@@ -361,6 +366,7 @@ export default {
 
 								if (content) {
 									await bot.reply(await markdownToHtml(content), 'HTML');
+									await historyManager.addMessage(bot.update.guest_message!.from.id, prompt, content);
 								}
 							} catch (e) {
 								console.error('Error in guest message handler:', e);
@@ -376,11 +382,7 @@ export default {
 							const prompt = bot.update.business_message?.text?.toString() ?? bot.update.business_message?.caption ?? '';
 
 							if (bot.update.business_message?.from.id !== 69148517) {
-								const { results } = await env.DB.prepare('SELECT * FROM Messages WHERE userId=?')
-									.bind(bot.update.business_message?.from.id)
-									.all();
-
-								const messageHistory = results.map((col) => ({ role: 'system', content: col.content as string }));
+								const messageHistory = await historyManager.getHistory(bot.update.business_message!.from.id);
 								const messages = [{ role: 'system', content: SYSTEM_PROMPTS.SEAN }, ...messageHistory, { role: 'user', content: prompt }];
 
 								try {
@@ -397,22 +399,13 @@ export default {
 									}
 
 									if (response.response) {
+										const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
 										await bot.reply(
-											await markdownToHtml(
-												typeof response.response === 'string' 
-													? response.response 
-													: JSON.stringify(response.response)
-											), 
+											await markdownToHtml(aiResponse), 
 											'HTML'
 										);
 
-										await env.DB.prepare('INSERT INTO Messages (id, userId, content) VALUES (?, ?, ?)')
-											.bind(
-												crypto.randomUUID(), 
-												bot.update.business_message?.from.id, 
-												`'[INST] ${prompt} [/INST] \n ${typeof response.response === 'string' ? response.response : JSON.stringify(response.response)}'`
-											)
-											.run();
+										await historyManager.addMessage(bot.update.business_message!.from.id, prompt, aiResponse);
 									}
 								} catch (e) {
 									console.error('Error in business message handler:', e);
