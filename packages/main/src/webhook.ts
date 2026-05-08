@@ -34,8 +34,8 @@ export default class Webhook {
     const params = new URLSearchParams({
       url: this.webhook.toString(),
       max_connections: '100',
-      allowed_updates: JSON.stringify(['message', 'inline_query', 'business_message', 'business_connection']),
-      drop_pending_updates: 'true',
+      // allowed_updates: JSON.stringify(['message', 'inline_query', 'guest_message', 'business_message', 'business_connection']),
+      // drop_pending_updates: 'true',
     });
 
     try {

@@ -3,6 +3,7 @@ import TelegramMessage from './TelegramMessage.js';
 import PartialTelegramUpdate from './PartialTelegramUpdate.js';
 import TelegramCallbackQuery from './TelegramCallbackQuery.js';
 import TelegramBusinessMessage from './TelegramBusinessMessage.js';
+import TelegramGuestMessage from './TelegramGuestMessage.js';
 
 export default class TelegramUpdate {
 	update_id: number;
@@ -14,6 +15,7 @@ export default class TelegramUpdate {
 	// chosen_inline_result?: TelegramChosenInlineResult;
 	callback_query?: TelegramCallbackQuery;
 	business_message?: TelegramBusinessMessage;
+	guest_message?: TelegramGuestMessage;
 	// shipping_query?: TelegramShippingQuery;
 	// pre_checkout_query?: TelegramPreCheckoutQuery;
 	// poll?: TelegramPoll;
@@ -29,6 +31,7 @@ export default class TelegramUpdate {
 		this.edited_channel_post = update.edited_channel_post;
 		this.inline_query = update.inline_query;
 		this.business_message = update.business_message;
+		this.guest_message = update.guest_message;
 		// chosen_inline_result = update.chosen_inline_result;
 		// callback_query = update.callback_query;
 		// shipping_query = update.shipping_query;

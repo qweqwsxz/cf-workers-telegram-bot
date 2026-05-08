@@ -69,6 +69,12 @@ interface AnswerInlineParams {
   next_offset?: string;
 }
 
+/** Interface for guest query parameters */
+interface AnswerGuestParams {
+  guest_query_id: string;
+  result: TelegramInlineQueryResultArticle | TelegramInlineQueryResultPhoto | TelegramInlineQueryResultVideo;
+}
+
 /** Type for all possible API parameters */
 type TelegramApiParams =
   | SendMessageParams
@@ -77,6 +83,7 @@ type TelegramApiParams =
   | SendChatActionParams
   | AnswerCallbackParams
   | AnswerInlineParams
+  | AnswerGuestParams
   | Record<string, unknown>;
 
 /** Class representing the Telegram API and all its methods */
@@ -203,6 +210,17 @@ export default class TelegramApi {
    */
   async answerCallback(botApi: string, data: AnswerCallbackParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'answerCallbackQuery', data);
+    return await fetch(url);
+  }
+
+  /**
+   * Send a guest response to a given botApi
+   * @param botApi - full URL to the telegram API without slug
+   * @param data - data to append to the request
+   * @returns Promise with the API response
+   */
+  async answerGuestQuery(botApi: string, data: AnswerGuestParams): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'answerGuestQuery', data);
     return await fetch(url);
   }
 

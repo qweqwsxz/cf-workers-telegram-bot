@@ -41,60 +41,6 @@ async function markdownToHtml(s: string): Promise<string> {
 	return parsedString.replace(tagPattern, '');
 }
 
-/**
- * Stream AI response and send periodic updates via bot.streamReply
- * @param bot - the telegram execution context
- * @param env - the environment
- * @param model - the AI model to use
- * @param messages - the messages to send
- * @returns the full response string
- */
-async function streamAiResponse(
-	bot: TelegramExecutionContext,
-	env: Environment,
-	model: string,
-	messages: { role: string; content: string }[],
-): Promise<string> {
-	// @ts-expect-error broken bindings
-	const response = (await env.AI.run(model, {
-		messages,
-		stream: true,
-	}));
-
-	const reader = response.getReader();
-	const decoder = new TextDecoder();
-	const draft_id = Math.floor(Math.random() * 1000000) + 1;
-	let fullResponse = '';
-	let lastUpdate = 0;
-
-	for (;;) {
-		const result = (await reader.read()) as ReadableStreamReadResult<Uint8Array>;
-		if (result.done) break;
-
-		const chunk = decoder.decode(result.value);
-		const lines = chunk.split('\n');
-
-		for (const line of lines) {
-			if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-				try {
-					const data = JSON.parse(line.slice(6)) as { response: string | undefined };
-					if (data.response) {
-						fullResponse += data.response;
-
-						if (Date.now() - lastUpdate > 1000) {
-							await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
-							lastUpdate = Date.now();
-						}
-					}
-				} catch (e) {
-					console.error('Error parsing AI stream:', e);
-				}
-			}
-		}
-	}
-	return fullResponse;
-}
-
 async function streamAiResponseGemma(
 	bot: TelegramExecutionContext,
 	env: Environment,
@@ -385,6 +331,31 @@ export default {
 							break;
 						}
 
+						case 'guest_message': {
+							const prompt = bot.update.guest_message?.text?.toString() ?? '';
+							const messages = [
+								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
+								{ role: 'user', content: prompt },
+							];
+
+							try {
+								await bot.sendTyping();
+								// @ts-expect-error broken bindings
+								const response = await env.AI.run(AI_MODELS.GEMMA, { messages });
+
+								// @ts-expect-error broken bindings
+								const content = response.choices?.[0]?.message?.content ?? response.response ?? '';
+
+								if (content) {
+									await bot.reply(await markdownToHtml(content), 'HTML');
+								}
+							} catch (e) {
+								console.error('Error in guest message handler:', e);
+								await bot.reply(`Error: ${e as string}`);
+							}
+							break;
+						}
+
 						case 'business_message': {
 							await bot.sendTyping();
 							const photo = bot.update.business_message?.photo;
@@ -438,6 +409,14 @@ export default {
 							}
 							break;
 						}
+						default:
+							try {
+								console.log(JSON.stringify(bot.update));
+							}
+							catch {
+								console.log("couldn't json.stringify update...", `${bot.update}`)
+							}
+							break;
 					}
 					return new Response('ok');
 				})

@@ -27,4 +27,17 @@ describe('telegram bot', () => {
     expect(await (await bot.handle(request)).text()).toBe('ok');
     expect(bot.currentContext.update_type).toBe('message');
   });
+
+  // Test for guest message handling
+  it('guest message response', async () => {
+    const bot = new TelegramBot('123456789').on(':guest_message', async () => {
+      return Promise.resolve(new Response('ok'));
+    });
+    const request = new Request('http://example.com/123456789', {
+      method: 'POST',
+      body: JSON.stringify({ guest_message: { text: 'hello', guest_query_id: 'guest123', chat: { id: 123, type: 'private' } } }),
+    });
+    expect(await (await bot.handle(request)).text()).toBe('ok');
+    expect(bot.currentContext.update_type).toBe('guest_message');
+  });
 });

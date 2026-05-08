@@ -74,6 +74,8 @@ export default class TelegramBot {
         return ':callback' in this.commands ? ':callback' : this.defaultCommand;
       case 'inline':
         return ':inline' in this.commands ? ':inline' : this.defaultCommand;
+      case 'guest_message':
+        return ':guest_message' in this.commands ? ':guest_message' : this.defaultCommand;
     }
 
     // Then check if it's a command starting with /
@@ -94,7 +96,8 @@ export default class TelegramBot {
     switch (ctx.update_type) {
       case 'message':
       case 'business_message':
-        return this.update.message?.text?.split(' ') ?? [];
+      case 'guest_message':
+        return (this.update.message?.text ?? this.update.guest_message?.text)?.split(' ') ?? [];
       case 'inline':
         return this.update.inline_query?.query.split(' ') ?? [];
       default:

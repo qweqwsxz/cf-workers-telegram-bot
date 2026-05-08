@@ -8,5 +8,6 @@ interface TelegramUser {
 	can_join_groups?: boolean;
 	can_read_all_group_messages?: boolean;
 	supports_inline_queries: boolean;
+	supports_guest_queries: boolean;
 }
 export default TelegramUser;

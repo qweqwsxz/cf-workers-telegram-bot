@@ -23,6 +23,7 @@
 	},
 	"version": "",
 	"dependencies": {
-		"@eslint/eslintrc": "^3.3.3"
+		"@eslint/eslintrc": "^3.3.3",
+		"wrangler": "^4.90.0"
 	}
 }

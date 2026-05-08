@@ -9,6 +9,7 @@ import TelegramUser from './types/TelegramUser.js';
 import TelegramMessageEntity from './types/TelegramMessageEntity.js';
 import TelegramPhotoSize from './types/TelegramPhotoSize.js';
 import TelegramMessage from './types/TelegramMessage.js';
+import TelegramGuestMessage from './types/TelegramGuestMessage.js';
 import TelegramInputMessageContent from './types/TelegramInputMessageContent.js';
 import TelegramInlineQuery from './types/TelegramInlineQuery.js';
 import TelegramUpdate from './types/TelegramUpdate.js';
@@ -32,6 +33,7 @@ export {
 	TelegramMessageEntity,
 	TelegramPhotoSize,
 	TelegramMessage,
+	TelegramGuestMessage,
 	TelegramInputMessageContent,
 	TelegramInlineQuery,
 	TelegramUpdate,

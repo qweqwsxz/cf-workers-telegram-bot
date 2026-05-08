@@ -1,6 +1,7 @@
 import TelegramBusinessMessage from './TelegramBusinessMessage.js';
 import TelegramInlineQuery from './TelegramInlineQuery.js';
 import TelegramMessage from './TelegramMessage.js';
+import TelegramGuestMessage from './TelegramGuestMessage.js';
 
 interface PartialTelegramUpdate {
 	update_id?: number;
@@ -10,5 +11,6 @@ interface PartialTelegramUpdate {
 	edited_channel_post?: TelegramMessage;
 	inline_query?: TelegramInlineQuery;
 	business_message?: TelegramBusinessMessage;
+	guest_message?: TelegramGuestMessage;
 }
 export default PartialTelegramUpdate;

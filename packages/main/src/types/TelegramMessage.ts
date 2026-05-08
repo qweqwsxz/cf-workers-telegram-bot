@@ -57,5 +57,8 @@ interface TelegramMessage {
 	// invoice?: TelegramInvoice;
 	// successful_payment?: TelegramSuccessfulPayment;
 	connected_website?: string;
+	guest_bot_caller_user?: TelegramUser;
+	guest_bot_caller_chat?: TelegramChat;
+	guest_query_id?: string;
 }
 export default TelegramMessage;
