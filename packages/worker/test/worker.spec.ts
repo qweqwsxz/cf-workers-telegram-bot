@@ -1,6 +1,6 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
-import worker, { Environment } from '../src/worker';
+import worker, { Environment } from '../src/index';
 
 declare module 'cloudflare:test' {
 	interface ProvidedEnv extends Environment {}
