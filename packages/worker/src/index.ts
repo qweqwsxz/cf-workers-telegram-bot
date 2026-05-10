@@ -1,4 +1,4 @@
-import TelegramBot, { TelegramExecutionContext } from '../../main/src/main.js';
+import TelegramBot, { TelegramExecutionContext, TelegramUpdate } from '../../main/src/main.js';
 import { marked } from 'marked';
 
 export interface Environment {
@@ -106,6 +106,16 @@ interface AiResponse {
 		};
 	}[];
 	response?: string;
+}
+
+interface Task {
+	type: 'code' | 'message' | 'business_message' | 'photo' | 'gen_photo';
+	prompt: string;
+	userId?: number;
+	history?: { role: string; content: string }[];
+	modelId?: string;
+	fileId?: string;
+	systemPrompt?: string;
 }
 
 class HistoryManager {
@@ -282,7 +292,7 @@ const AVAILABLE_MODELS: Record<string, { id: string, cost: number }> = {
 	'google/gemini-3.1-pro': { id: 'google/gemini-3.1-pro', cost: 100 }
 };
 
-async function processTask(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext) {
+async function processTask(bot: TelegramExecutionContext, env: Environment, task: Task, historyManager: HistoryManager, ctx: ExecutionContext) {
 	await bot.sendTyping();
 	try {
 		switch (task.type) {
@@ -385,7 +395,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 }
 
 async function getBalance(userId: number, env: Environment): Promise<number> {
-	const balanceKey = `balance:${userId}`;
+	const balanceKey = `balance:${String(userId)}`;
 	let balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number | null);
 	if (balance === null) {
 		balance = 200;
@@ -394,16 +404,16 @@ async function getBalance(userId: number, env: Environment): Promise<number> {
 	return balance;
 }
 
-async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext, amountOverride?: number) {
+async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: Task, historyManager: HistoryManager, ctx: ExecutionContext, amountOverride?: number) {
 	const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
 	if (!userId) return;
 
 	task.userId = userId;
-	const balanceKey = `balance:${userId}`;
+	const balanceKey = `balance:${String(userId)}`;
 	const balance = await getBalance(userId, env);
 
 	// Determine model and cost
-	const modelPreference = await env.CONVERSATION_HISTORY.get(`model:${userId}`) || 'gemma4';
+	const modelPreference = await env.CONVERSATION_HISTORY.get(`model:${String(userId)}`) || 'gemma4';
 	const modelConfig = AVAILABLE_MODELS[modelPreference] || AVAILABLE_MODELS['gemma4'];
 	const amount = amountOverride !== undefined ? amountOverride : modelConfig.cost;
 	task.modelId = modelConfig.id;
@@ -437,7 +447,7 @@ export default {
 			const userId = parseInt(url.searchParams.get('userId') || '0');
 			const amount = parseInt(url.searchParams.get('amount') || '0');
 			if (userId && !isNaN(amount)) {
-				const balanceKey = `balance:${userId}`;
+				const balanceKey = `balance:${String(userId)}`;
 				const balance = await getBalance(userId, env);
 				await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance + amount));
 				return new Response(JSON.stringify({ success: true, userId, newBalance: balance + amount }), {
@@ -449,7 +459,7 @@ export default {
 		if (request.method === 'POST') {
 			const clonedRequest = request.clone();
 			try {
-				const update = await clonedRequest.json() as any;
+				const update = await clonedRequest.json() as TelegramUpdate;
 				if (update.message?.sender_chat || update.business_message?.sender_chat || update.channel_post || update.edited_channel_post) {
 					return new Response('ok');
 				}
@@ -576,13 +586,13 @@ export default {
 
 							try {
 								// @ts-expect-error broken bindings
-								const response = await env.AI.run(AI_MODELS.LLAMA, { messages, max_completion_tokens: 100 });
+								const rawResponse = await env.AI.run(AI_MODELS.LLAMA, { messages, max_completion_tokens: 100 });
+								const aiResponse = rawResponse as AiResponse;
 
-								// @ts-expect-error broken bindings
-								if ('response' in response) {
+								if (aiResponse.response) {
 									await bot.replyInline(
-										(typeof response.response === 'string' ? response.response : ''),
-										await markdownToHtml(typeof response.response === 'string' ? response.response : ''),
+										aiResponse.response,
+										await markdownToHtml(aiResponse.response),
 										'HTML'
 									);
 								}
@@ -684,15 +694,15 @@ export default {
 
 					if (payload.startsWith('load:')) {
 						const amount = parseInt(payload.split(':')[1]);
-						const balanceKey = `balance:${userId}`;
+						const balanceKey = `balance:${String(userId)}`;
 						const balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number) || 0;
 						await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance + amount));
-						await bot.reply(`Successfully loaded ${amount} Stars! New balance: ${balance + amount} Stars.`);
+						await bot.reply(`Successfully loaded ${String(amount)} Stars! New balance: ${String(balance + amount)} Stars.`);
 						return new Response('ok');
 					}
 
 					const taskId = payload;
-					const task = await env.CONVERSATION_HISTORY.get(`task:${taskId}`, 'json') as any;
+					const task = await env.CONVERSATION_HISTORY.get(`task:${taskId}`, 'json') as Task;
 					if (!task) {
 						await bot.reply('Error: Task not found');
 						return new Response('ok');
