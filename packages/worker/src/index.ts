@@ -134,6 +134,7 @@ async function streamAiResponseGemma(
 	model: string,
 	messages: { role: string; content: string }[],
 	max_completion_tokens?: number,
+	image?: number[]
 ): Promise<string> {
 	const isGemini = model.startsWith('google/gemini');
 	const payload: any = {};
@@ -143,11 +144,22 @@ async function streamAiResponseGemma(
 			role: m.role === 'assistant' ? 'model' : 'user',
 			parts: [{ text: m.content }]
 		}));
+		if (image) {
+			payload.contents[payload.contents.length - 1].parts.push({
+				inline_data: {
+					mime_type: 'image/jpeg',
+					data: btoa(String.fromCharCode(...image))
+				}
+			});
+		}
 	} else {
 		payload.messages = messages;
 		payload.stream = true;
 		if (max_completion_tokens) {
 			payload.max_completion_tokens = max_completion_tokens;
+		}
+		if (image) {
+			payload.image = image;
 		}
 	}
 
@@ -301,20 +313,16 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					...task.history,
 					{ role: 'user', content: task.prompt },
 				];
-				let response: AiResponse;
+				let image: number[] | undefined;
 				if (task.fileId) {
 					const fileResponse = await bot.getFile(task.fileId);
 					const blob = await fileResponse.arrayBuffer();
-					// @ts-expect-error broken bindings
-					response = (await env.AI.run(AI_MODELS.LLAMA, { messages, image: [...new Uint8Array(blob)] }));
-				} else {
-					// @ts-expect-error broken bindings
-					response = (await env.AI.run(AI_MODELS.LLAMA, { messages }));
+					image = [...new Uint8Array(blob)];
 				}
-				if (response.response) {
-					const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
-					await bot.reply(await markdownToHtml(aiResponse), 'HTML');
-					await historyManager.addMessage(task.userId, task.prompt, aiResponse);
+				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.LLAMA, messages, 50000, image);
+				if (response) {
+					await bot.reply(await markdownToHtml(response), 'HTML');
+					await historyManager.addMessage(task.userId, task.prompt, response);
 				}
 				break;
 			}
@@ -326,16 +334,11 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				];
 				const fileResponse = await bot.getFile(task.fileId);
 				const blob = await fileResponse.arrayBuffer();
-				// @ts-expect-error broken bindings
-				const response = await env.AI.run(AI_MODELS.GEMMA, {
-					messages,
-					image: [...new Uint8Array(blob)]
-				});
-				// @ts-expect-error broken bindings
-				if ('response' in response && response.response) {
-					const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
-					await bot.reply(await markdownToHtml(aiResponse), 'HTML');
-					await historyManager.addMessage(task.userId, task.prompt, aiResponse);
+				const image = [...new Uint8Array(blob)];
+				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.GEMMA, messages, 50000, image);
+				if (response) {
+					await bot.reply(await markdownToHtml(response), 'HTML');
+					await historyManager.addMessage(task.userId, task.prompt, response);
 				}
 				break;
 			}
