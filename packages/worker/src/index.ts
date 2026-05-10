@@ -44,7 +44,7 @@ async function markdownToHtml(s: string): Promise<string> {
 
 	while (i < html.length) {
 		if (html[i] === '<') {
-			const tagMatch = html.slice(i).match(/^<\/?([a-z1-6]+)(?:\s+[^>]*)?>/i);
+			const tagMatch = /^<\/?([a-z1-6]+)(?:\s+[^>]*)?>/i.exec(html.slice(i));
 			if (tagMatch) {
 				const fullTag = tagMatch[0];
 				const tagName = tagMatch[1].toLowerCase();
@@ -54,15 +54,17 @@ async function markdownToHtml(s: string): Promise<string> {
 					if (isClosing) {
 						if (tagStack.includes(tagName)) {
 							while (tagStack.length > 0) {
-								const top = tagStack.pop()!;
-								result += `</${top}>`;
-								if (top === tagName) break;
+								const top = tagStack.pop();
+								if (top) {
+									result += `</${top}>`;
+									if (top === tagName) break;
+								}
 							}
 						}
 					} else {
 						tagStack.push(tagName);
 						if (tagName === 'a') {
-							const hrefMatch = fullTag.match(/href="([^"]*)"/i);
+							const hrefMatch = /href="([^"]*)"/i.exec(fullTag);
 							result += hrefMatch ? `<a href="${hrefMatch[1]}">` : '<a>';
 						} else {
 							result += `<${tagName}>`;
@@ -78,7 +80,7 @@ async function markdownToHtml(s: string): Promise<string> {
 		else if (html[i] === '>') result += '&gt;';
 		else if (html[i] === '&') {
 			// Check if it's already an entity
-			const entityMatch = html.slice(i).match(/^&[a-z0-9#]+;/i);
+			const entityMatch = /^&[a-z0-9#]+;/i.exec(html.slice(i));
 			if (entityMatch) {
 				result += entityMatch[0];
 				i += entityMatch[0].length;
@@ -90,7 +92,10 @@ async function markdownToHtml(s: string): Promise<string> {
 	}
 
 	while (tagStack.length > 0) {
-		result += `</${tagStack.pop()}>`;
+		const top = tagStack.pop();
+		if (top) {
+			result += `</${top}>`;
+		}
 	}
 
 	return result;
@@ -106,6 +111,13 @@ interface AiResponse {
 		};
 	}[];
 	response?: string;
+	candidates?: {
+		content?: {
+			parts?: {
+				text?: string;
+			}[];
+		};
+	}[];
 }
 
 interface Task {
@@ -122,19 +134,19 @@ class HistoryManager {
 	constructor(private kv: KVNamespace) { }
 
 	async getHistory(userId: number): Promise<{ role: string; content: string }[]> {
-		const history = await this.kv.get(`history:${userId}`, 'json');
-		return (history as { role: string; content: string }[]) || [];
+		const history = await this.kv.get<{ role: string; content: string }[]>(`history:${String(userId)}`, 'json');
+		return history ?? [];
 	}
 
 	async addMessage(userId: number, prompt: string, response: string) {
 		const history = await this.getHistory(userId);
 		history.push({ role: 'system', content: `[INST] ${prompt} [/INST] \n ${response}` });
 		const trimmedHistory = history.slice(-10);
-		await this.kv.put(`history:${userId}`, JSON.stringify(trimmedHistory), { expirationTtl: 86400 });
+		await this.kv.put(`history:${String(userId)}`, JSON.stringify(trimmedHistory), { expirationTtl: 86400 });
 	}
 
 	async clearHistory(userId: number) {
-		await this.kv.delete(`history:${userId}`);
+		await this.kv.delete(`history:${String(userId)}`);
 	}
 }
 
@@ -147,15 +159,16 @@ async function streamAiResponseGemma(
 	image?: number[]
 ): Promise<string> {
 	const isGemini = model.startsWith('google/gemini');
-	const payload: any = {};
+	const payload: Record<string, unknown> = {};
 
 	if (isGemini) {
 		payload.contents = messages.map(m => ({
 			role: m.role === 'assistant' ? 'model' : 'user',
 			parts: [{ text: m.content }]
 		}));
+		const contents = payload.contents as { role: string; parts: { text?: string; inline_data?: { mime_type: string; data: string } }[] }[];
 		if (image) {
-			payload.contents[payload.contents.length - 1].parts.push({
+			contents[contents.length - 1].parts.push({
 				inline_data: {
 					mime_type: 'image/jpeg',
 					data: btoa(String.fromCharCode(...image))
@@ -182,7 +195,7 @@ async function streamAiResponseGemma(
 
 	// Fallback for non-streaming responses
 	if (!(response instanceof ReadableStream)) {
-		const data = response as any;
+		const data = response as AiResponse;
 		const content = data.choices?.[0]?.message?.content ?? 
 						data.response ?? 
 						data.candidates?.[0]?.content?.parts?.[0]?.text ?? 
@@ -218,7 +231,7 @@ async function streamAiResponseGemma(
 					// Handle standard OpenAI/Gemma format or Google-native format
 					const content = data.choices?.[0]?.delta?.content ?? 
 									data.response ?? 
-									(data as any).candidates?.[0]?.content?.parts?.[0]?.text ?? 
+									data.candidates?.[0]?.content?.parts?.[0]?.text ?? 
 									'';
 
 					if (content) {
@@ -228,7 +241,7 @@ async function streamAiResponseGemma(
 						if (Date.now() - lastUpdate > 1000) {
 							try {
 								await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
-							} catch (e) {
+							} catch {
 								// Ignore temporary parse errors during streaming
 							}
 							lastUpdate = Date.now();
@@ -298,19 +311,19 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 		switch (task.type) {
 			case 'code': {
 				const messages = [{ role: 'user', content: task.prompt }];
-				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.CODER, messages, 50000);
+				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.CODER, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 				}
 				break;
 			}
 			case 'message': {
-				const messages = [
-					{ role: 'system', content: task.systemPrompt || SYSTEM_PROMPTS.TUX_ROBOT },
-					...task.history,
+				const messages: { role: string; content: string }[] = [
+					{ role: 'system', content: task.systemPrompt ?? SYSTEM_PROMPTS.TUX_ROBOT },
+					...(task.history ?? []),
 					{ role: 'user', content: task.prompt },
 				];
-				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.GEMMA, messages, 50000);
+				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					await historyManager.addMessage(task.userId, task.prompt, response);
@@ -318,9 +331,9 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				break;
 			}
 			case 'business_message': {
-				const messages = [
-					{ role: 'system', content: task.systemPrompt || SYSTEM_PROMPTS.SEAN },
-					...task.history,
+				const messages: { role: string; content: string }[] = [
+					{ role: 'system', content: task.systemPrompt ?? SYSTEM_PROMPTS.SEAN },
+					...(task.history as { role: string; content: string }[]),
 					{ role: 'user', content: task.prompt },
 				];
 				let image: number[] | undefined;
@@ -329,7 +342,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					const blob = await fileResponse.arrayBuffer();
 					image = [...new Uint8Array(blob)];
 				}
-				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.LLAMA, messages, 50000, image);
+				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.LLAMA, messages, 50000, image);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					await historyManager.addMessage(task.userId, task.prompt, response);
@@ -337,15 +350,15 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				break;
 			}
 			case 'photo': {
-				const messages = [
+				const messages: { role: string; content: string }[] = [
 					{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
-					...task.history,
+					...(task.history ?? []),
 					{ role: 'user', content: task.prompt },
 				];
 				const fileResponse = await bot.getFile(task.fileId);
 				const blob = await fileResponse.arrayBuffer();
 				const image = [...new Uint8Array(blob)];
-				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.GEMMA, messages, 50000, image);
+				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000, image);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					await historyManager.addMessage(task.userId, task.prompt, response);
@@ -354,22 +367,23 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 			}
 			case 'gen_photo': {
 				// @ts-expect-error broken bindings
-				const photo: any = await env.AI.run(
+				const rawPhoto = await env.AI.run(
 					AI_MODELS.IMAGEN,
 					{ prompt: task.prompt },
 					{ gateway: { id: 'default' } }
 				);
+				const photo = rawPhoto as { result?: { image?: string }; image?: string };
 
 				let imgUrl: string | null = null;
 				let imgData: ArrayBuffer | Uint8Array | null = null;
 
-				if (photo?.result?.image && photo.result.image.startsWith('http')) {
+				if (photo.result?.image?.startsWith('http')) {
 					imgUrl = photo.result.image;
-				} else if (photo?.image || photo?.result?.image) {
-					const data = photo.image || photo.result.image;
+				} else if (photo.image ?? photo.result?.image) {
+					const data = photo.image ?? photo.result?.image ?? '';
 					const base64Data = data.includes(',') ? data.split(',')[1] : data;
 					const binaryString = atob(base64Data);
-					imgData = Uint8Array.from(binaryString, (m) => m.codePointAt(0)!);
+					imgData = Uint8Array.from(binaryString, (m) => m.codePointAt(0) ?? 0);
 				} else if (photo instanceof ReadableStream || photo instanceof ArrayBuffer || (typeof Uint8Array !== 'undefined' && photo instanceof Uint8Array)) {
 					imgData = photo instanceof ReadableStream ? await new Response(photo).arrayBuffer() : photo;
 				} else {
@@ -396,16 +410,17 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 
 async function getBalance(userId: number, env: Environment): Promise<number> {
 	const balanceKey = `balance:${String(userId)}`;
-	let balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number | null);
+	const balance = await env.CONVERSATION_HISTORY.get<number>(balanceKey, 'json');
 	if (balance === null) {
-		balance = 200;
-		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance));
+		const defaultBalance = 200;
+		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(defaultBalance));
+		return defaultBalance;
 	}
 	return balance;
 }
 
 async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: Task, historyManager: HistoryManager, ctx: ExecutionContext, amountOverride?: number) {
-	const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
+	const userId = bot.update.message?.from.id ?? bot.update.business_message?.from.id ?? bot.update.guest_message?.from.id;
 	if (!userId) return;
 
 	task.userId = userId;
@@ -413,9 +428,9 @@ async function chargeStars(bot: TelegramExecutionContext, env: Environment, task
 	const balance = await getBalance(userId, env);
 
 	// Determine model and cost
-	const modelPreference = await env.CONVERSATION_HISTORY.get(`model:${String(userId)}`) || 'gemma4';
-	const modelConfig = AVAILABLE_MODELS[modelPreference] || AVAILABLE_MODELS['gemma4'];
-	const amount = amountOverride !== undefined ? amountOverride : modelConfig.cost;
+	const modelPreference = await env.CONVERSATION_HISTORY.get<string>(`model:${String(userId)}`) ?? 'gemma4';
+	const modelConfig = AVAILABLE_MODELS[modelPreference] ?? AVAILABLE_MODELS.gemma4;
+	const amount = amountOverride ?? modelConfig.cost;
 	task.modelId = modelConfig.id;
 
 	if (balance >= amount) {
@@ -444,8 +459,8 @@ export default {
 		const token = tokens.find(t => url.pathname.startsWith(`/${t}`));
 
 		if (token && url.pathname.endsWith('/add-credits')) {
-			const userId = parseInt(url.searchParams.get('userId') || '0');
-			const amount = parseInt(url.searchParams.get('amount') || '0');
+			const userId = parseInt(url.searchParams.get('userId') ?? '0');
+			const amount = parseInt(url.searchParams.get('amount') ?? '0');
 			if (userId && !isNaN(amount)) {
 				const balanceKey = `balance:${String(userId)}`;
 				const balance = await getBalance(userId, env);
@@ -459,11 +474,11 @@ export default {
 		if (request.method === 'POST') {
 			const clonedRequest = request.clone();
 			try {
-				const update = await clonedRequest.json() as TelegramUpdate;
+				const update: TelegramUpdate = await clonedRequest.json();
 				if (update.message?.sender_chat || update.business_message?.sender_chat || update.channel_post || update.edited_channel_post) {
 					return new Response('ok');
 				}
-			} catch (e) {
+			} catch {
 				// Ignore non-JSON or malformed requests
 			}
 		}
@@ -508,10 +523,10 @@ export default {
 					return new Response('ok');
 				})
 				.on('balance', async (bot: TelegramExecutionContext) => {
-					const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
+					const userId = bot.update.message?.from.id ?? bot.update.business_message?.from.id ?? bot.update.guest_message?.from.id;
 					if (userId) {
 						const balance = await getBalance(userId, env);
-						await bot.reply(`Your current balance is ${balance} Stars.`);
+						await bot.reply(`Your current balance is ${String(balance)} Stars.`);
 					}
 					return new Response('ok');
 				})
@@ -522,15 +537,18 @@ export default {
 						if (isNaN(amount) || amount <= 0 || amount > 1000) {
 							await bot.reply('Please specify an amount between 1 and 1000 Stars. Example: /load 100');
 						} else {
-							await bot.sendStarsInvoice('Stars Top-up', `Purchase ${amount} Stars`, `load:${amount}`, amount);
+							await bot.sendStarsInvoice('Stars Top-up', `Purchase ${String(amount)} Stars`, `load:${String(amount)}`, amount);
 						}
 					}
 					return new Response('ok');
 				})
 				.on('clear', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
-						await historyManager.clearHistory(bot.update.message!.from.id);
-						await bot.reply('History cleared');
+						const userId = bot.update.message?.from.id;
+						if (userId) {
+							await historyManager.clearHistory(userId);
+							await bot.reply('History cleared');
+						}
 					}
 					return new Response('ok');
 				})
@@ -545,8 +563,11 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-							const history = await historyManager.getHistory(bot.update.message!.from.id);
-							await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
+							const userId = bot.update.message?.from.id;
+							if (userId) {
+								const history = await historyManager.getHistory(userId);
+								await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
+							}
 							break;
 						}
 
@@ -561,8 +582,11 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-							const history = await historyManager.getHistory(bot.update.message!.from.id);
-							await chargeStars(bot, env, { type: 'photo', prompt, history, fileId }, historyManager, ctx, 10);
+							const userId = bot.update.message?.from.id;
+							if (userId) {
+								const history = await historyManager.getHistory(userId);
+								await chargeStars(bot, env, { type: 'photo', prompt, history, fileId }, historyManager, ctx, 10);
+							}
 							break;
 						}
 
@@ -612,8 +636,11 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-							const history = await historyManager.getHistory(bot.update.guest_message!.from.id);
-							await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
+							const userId = bot.update.guest_message?.from.id;
+							if (userId) {
+								const history = await historyManager.getHistory(userId);
+								await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
+							}
 							break;
 						}
 
@@ -631,8 +658,9 @@ export default {
 								}
 							}
 
-							if (bot.update.business_message?.from.id !== 69148517) {
-								const history = await historyManager.getHistory(bot.update.business_message!.from.id);
+							const userId = bot.update.business_message?.from.id;
+							if (userId && userId !== 69148517) {
+								const history = await historyManager.getHistory(userId);
 								await chargeStars(bot, env, { type: 'business_message', prompt, history, fileId, systemPrompt: SYSTEM_PROMPTS.SEAN }, historyManager, ctx);
 							}
 							break;
@@ -650,9 +678,10 @@ export default {
 				})
 				.on('model', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
-						const userId = bot.update.message!.from.id;
-						const modelKey = `model:${userId}`;
-						const args = bot.update.message?.text?.toString().split(' ') || [];
+						const userId = bot.update.message?.from.id;
+						if (userId) {
+							const modelKey = `model:${String(userId)}`;
+							const args = bot.update.message?.text?.toString().split(' ') ?? [];
 
 						if (args.length > 1) {
 							const selectedModel = args[1].toLowerCase();
@@ -663,14 +692,15 @@ export default {
 								await bot.reply(`Invalid model. Available models:\n${Object.keys(AVAILABLE_MODELS).join('\n')}`);
 							}
 						} else {
-							const currentModel = (await env.CONVERSATION_HISTORY.get(modelKey)) || 'gemma4';
+							const currentModel = (await env.CONVERSATION_HISTORY.get<string>(modelKey)) ?? 'gemma4';
 							await bot.reply(
 								`Current model: <b>${currentModel}</b>\n\n` +
 								`Available models:\n` +
-								Object.entries(AVAILABLE_MODELS).map(([name, cfg]) => `- <code>${name}</code> (${cfg.cost} Stars)`).join('\n'),
+								Object.entries(AVAILABLE_MODELS).map(([name, cfg]) => `- <code>${name}</code> (${String(cfg.cost)} Stars)`).join('\n'),
 								'HTML'
 							);
 						}
+					}
 					}
 					return new Response('ok');
 				})
@@ -690,19 +720,20 @@ export default {
 					if (!payment) return new Response('ok');
 
 					const payload = payment.invoice_payload;
-					const userId = bot.update.message!.from.id;
+					const userId = bot.update.message?.from.id;
+					if (!userId) return new Response('ok');
 
 					if (payload.startsWith('load:')) {
 						const amount = parseInt(payload.split(':')[1]);
 						const balanceKey = `balance:${String(userId)}`;
-						const balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number) || 0;
+						const balance = await env.CONVERSATION_HISTORY.get<number>(balanceKey, 'json') ?? 0;
 						await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance + amount));
 						await bot.reply(`Successfully loaded ${String(amount)} Stars! New balance: ${String(balance + amount)} Stars.`);
 						return new Response('ok');
 					}
 
 					const taskId = payload;
-					const task = await env.CONVERSATION_HISTORY.get(`task:${taskId}`, 'json') as Task;
+					const task = await env.CONVERSATION_HISTORY.get<Task>(`task:${taskId}`, 'json');
 					if (!task) {
 						await bot.reply('Error: Task not found');
 						return new Response('ok');
