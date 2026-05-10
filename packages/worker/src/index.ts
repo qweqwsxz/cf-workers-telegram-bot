@@ -239,7 +239,10 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 		switch (task.type) {
 			case 'code': {
 				const messages = [{ role: 'user', content: task.prompt }];
-				await streamAiResponseGemma(bot, env, AI_MODELS.CODER, messages, 50000);
+				const response = await streamAiResponseGemma(bot, env, AI_MODELS.CODER, messages, 50000);
+				if (response) {
+					await bot.reply(await markdownToHtml(response), 'HTML');
+				}
 				break;
 			}
 			case 'message': {
