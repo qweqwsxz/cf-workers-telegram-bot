@@ -244,7 +244,15 @@ export default {
 					switch (bot.update_type) {
 						case 'message': {
 							// await bot.sendTyping();
-							const prompt = bot.update.message?.text?.toString() ?? '';
+							let prompt = bot.update.message?.text?.toString() ?? '';
+
+							if (bot.update.message?.reply_to_message) {
+								const reply = bot.update.message.reply_to_message;
+								const replyText = reply.text ?? reply.caption ?? '';
+								if (replyText) {
+									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
+								}
+							}
 
 							const messageHistory = await historyManager.getHistory(bot.update.message!.from.id);
 
@@ -273,7 +281,15 @@ export default {
 							await bot.sendTyping();
 							const photo = bot.update.message?.photo;
 							const fileId: string = photo ? photo[photo.length - 1]?.file_id ?? '' : '';
-							const prompt = bot.update.message?.caption ?? 'Please describe this image';
+							let prompt = bot.update.message?.caption ?? 'Please describe this image';
+
+							if (bot.update.message?.reply_to_message) {
+								const reply = bot.update.message.reply_to_message;
+								const replyText = reply.text ?? reply.caption ?? '';
+								if (replyText) {
+									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
+								}
+							}
 
 							console.log('Processing photo:', { fileId, prompt });
 
@@ -349,7 +365,14 @@ export default {
 						}
 
 						case 'guest_message': {
-							const prompt = bot.update.guest_message?.text?.toString() ?? '';
+							let prompt = bot.update.guest_message?.text?.toString() ?? '';
+							if (bot.update.guest_message?.reply_to_message) {
+								const reply = bot.update.guest_message.reply_to_message;
+								const replyText = reply.text ?? reply.caption ?? '';
+								if (replyText) {
+									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
+								}
+							}
 							const messageHistory = await historyManager.getHistory(bot.update.guest_message!.from.id);
 							const messages = [
 								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
@@ -379,7 +402,15 @@ export default {
 							await bot.sendTyping();
 							const photo = bot.update.business_message?.photo;
 							const fileId: string = photo ? photo[photo.length - 1]?.file_id ?? '' : '';
-							const prompt = bot.update.business_message?.text?.toString() ?? bot.update.business_message?.caption ?? '';
+							let prompt = bot.update.business_message?.text?.toString() ?? bot.update.business_message?.caption ?? '';
+
+							if (bot.update.business_message?.reply_to_message) {
+								const reply = bot.update.business_message.reply_to_message;
+								const replyText = reply.text ?? reply.caption ?? '';
+								if (replyText) {
+									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
+								}
+							}
 
 							if (bot.update.business_message?.from.id !== 69148517) {
 								const messageHistory = await historyManager.getHistory(bot.update.business_message!.from.id);
