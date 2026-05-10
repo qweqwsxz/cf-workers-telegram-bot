@@ -347,6 +347,17 @@ export default {
 			}
 			return new Response('Invalid params. Usage: /add-credits?userId=<id>&amount=<amount>', { status: 400 });
 		}
+		if (request.method === 'POST') {
+			const clonedRequest = request.clone();
+			try {
+				const update = await clonedRequest.json() as any;
+				if (update.message?.sender_chat || update.business_message?.sender_chat || update.channel_post || update.edited_channel_post) {
+					return new Response('ok');
+				}
+			} catch (e) {
+				// Ignore non-JSON or malformed requests
+			}
+		}
 
 		await Promise.all([
 			tuxrobot
