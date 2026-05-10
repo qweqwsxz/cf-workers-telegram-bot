@@ -298,7 +298,7 @@ async function getBalance(userId: number, env: Environment): Promise<number> {
 	const balanceKey = `balance:${userId}`;
 	let balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number | null);
 	if (balance === null) {
-		balance = 20;
+		balance = 200;
 		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance));
 	}
 	return balance;
@@ -374,7 +374,7 @@ export default {
 							'/code <prompt> - Generate code snippets (10 Stars)\n' +
 							'<prompt> - Generate text (10 Stars)\n' +
 							'/clear - Clear your conversation history\n\n' +
-							'New users start with 20 free credits!',
+							'New users start with 200 free credits!',
 						);
 					}
 					return new Response('ok');
