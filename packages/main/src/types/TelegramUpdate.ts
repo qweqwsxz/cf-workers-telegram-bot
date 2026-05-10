@@ -5,6 +5,8 @@ import TelegramCallbackQuery from './TelegramCallbackQuery.js';
 import TelegramBusinessMessage from './TelegramBusinessMessage.js';
 import TelegramGuestMessage from './TelegramGuestMessage.js';
 
+import TelegramPreCheckoutQuery from './TelegramPreCheckoutQuery.js';
+
 export default class TelegramUpdate {
 	update_id: number;
 	message?: TelegramMessage;
@@ -17,7 +19,7 @@ export default class TelegramUpdate {
 	business_message?: TelegramBusinessMessage;
 	guest_message?: TelegramGuestMessage;
 	// shipping_query?: TelegramShippingQuery;
-	// pre_checkout_query?: TelegramPreCheckoutQuery;
+	pre_checkout_query?: TelegramPreCheckoutQuery;
 	// poll?: TelegramPoll;
 	// poll_answer?: TelegramPollAnswer;
 	// my_chat_member?: TelegramChatMemberUpdated;
@@ -35,7 +37,7 @@ export default class TelegramUpdate {
 		// chosen_inline_result = update.chosen_inline_result;
 		// callback_query = update.callback_query;
 		// shipping_query = update.shipping_query;
-		// pre_checkout_query = update.pre_checkout_query;
+		this.pre_checkout_query = update.pre_checkout_query;
 		// poll = update.poll;
 		// poll_answer = update.poll_answer;
 		// my_chat_member = update.my_chat_member;

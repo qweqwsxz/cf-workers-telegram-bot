@@ -75,6 +75,23 @@ interface AnswerGuestParams {
   result: TelegramInlineQueryResultArticle | TelegramInlineQueryResultPhoto | TelegramInlineQueryResultVideo;
 }
 
+/** Interface for invoice parameters */
+interface SendInvoiceParams extends TelegramApiBaseParams {
+  title: string;
+  description: string;
+  payload: string;
+  provider_token: string;
+  currency: string;
+  prices: { label: string; amount: number }[];
+}
+
+/** Interface for pre-checkout query parameters */
+interface AnswerPreCheckoutParams {
+  pre_checkout_query_id: string;
+  ok: boolean;
+  error_message?: string;
+}
+
 /** Type for all possible API parameters */
 type TelegramApiParams =
   | SendMessageParams
@@ -84,6 +101,8 @@ type TelegramApiParams =
   | AnswerCallbackParams
   | AnswerInlineParams
   | AnswerGuestParams
+  | SendInvoiceParams
+  | AnswerPreCheckoutParams
   | Record<string, unknown>;
 
 /** Class representing the Telegram API and all its methods */
@@ -287,5 +306,27 @@ export default class TelegramApi {
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendMessageDraft', data);
     return await this.fetchAndLog(url, 'sendMessageDraft', data);
+  }
+
+  /**
+   * Send an invoice to a user
+   * @param botApi - full URL to the telegram API without slug
+   * @param data - invoice parameters
+   * @returns Promise with the API response
+   */
+  async sendInvoice(botApi: string, data: SendInvoiceParams): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'sendInvoice', data);
+    return await this.fetchAndLog(url, 'sendInvoice', data);
+  }
+
+  /**
+   * Answer a pre-checkout query
+   * @param botApi - full URL to the telegram API without slug
+   * @param data - pre-checkout parameters
+   * @returns Promise with the API response
+   */
+  async answerPreCheckoutQuery(botApi: string, data: AnswerPreCheckoutParams): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'answerPreCheckoutQuery', data);
+    return await this.fetchAndLog(url, 'answerPreCheckoutQuery', data);
   }
 }

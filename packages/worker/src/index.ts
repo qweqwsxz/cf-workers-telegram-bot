@@ -54,7 +54,7 @@ interface AiResponse {
 }
 
 class HistoryManager {
-	constructor(private kv: KVNamespace) {}
+	constructor(private kv: KVNamespace) { }
 
 	async getHistory(userId: number): Promise<{ role: string; content: string }[]> {
 		const history = await this.kv.get(`history:${userId}`, 'json');
@@ -94,7 +94,7 @@ async function streamAiResponseGemma(
 	let lastUpdate = 0;
 	let buffer = '';
 
-	for (;;) {
+	for (; ;) {
 		const { done, value } = await reader.read();
 		if (done) break;
 
@@ -109,7 +109,7 @@ async function streamAiResponseGemma(
 			if (trimmedLine.startsWith('data: ')) {
 				try {
 					const data = JSON.parse(trimmedLine.slice(6)) as AiResponse;
-					
+
 					// Use the new OpenAI-style path or the legacy response key
 					const content = data.choices?.[0]?.delta?.content ?? data.response ?? '';
 
@@ -129,14 +129,14 @@ async function streamAiResponseGemma(
 			}
 		}
 	}
-	
+
 	// Final update to ensure the message is complete in Telegram
 	try {
 		const timeToWait = Math.max(0, 1000 - (Date.now() - lastUpdate));
 		if (timeToWait > 0) {
 			await new Promise(resolve => setTimeout(resolve, timeToWait));
 		}
-		
+
 		// Also process any leftover buffer just in case
 		if (buffer.trim()) {
 			const trimmedLine = buffer.trim();
@@ -150,12 +150,12 @@ async function streamAiResponseGemma(
 				}
 			}
 		}
-		
+
 		await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
 	} catch (e) {
 		console.error('Final streamReply failed:', e);
 	}
-	
+
 	return fullResponse;
 }
 
@@ -169,10 +169,140 @@ const SYSTEM_PROMPTS = {
 const AI_MODELS = {
 	LLAMA: '@cf/meta/llama-3.2-11b-vision-instruct',
 	CODER: '@hf/thebloke/deepseek-coder-6.7b-instruct-awq',
-	FLUX: '@cf/black-forest-labs/flux-1-schnell',
+	IMAGEN: '@cf/google/imagen-4',
 	STABLE_DIFFUSION: '@cf/stabilityai/stable-diffusion-xl-base-1.0',
 	GEMMA: '@cf/google/gemma-4-26b-a4b-it',
 };
+
+async function processTask(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext) {
+	await bot.sendTyping();
+	try {
+		switch (task.type) {
+			case 'code': {
+				const messages = [{ role: 'user', content: task.prompt }];
+				// @ts-expect-error broken bindings
+				const response = await env.AI.run(AI_MODELS.CODER, { messages });
+				// @ts-expect-error broken bindings
+				if ('response' in response) {
+					await bot.reply(
+						await markdownToHtml(
+							typeof response.response === 'string'
+								? response.response
+								: JSON.stringify(response.response)
+						),
+						'HTML'
+					);
+				}
+				break;
+			}
+			case 'message': {
+				const messages = [
+					{ role: 'system', content: task.systemPrompt || SYSTEM_PROMPTS.TUX_ROBOT },
+					...task.history,
+					{ role: 'user', content: task.prompt },
+				];
+				const response = await streamAiResponseGemma(bot, env, AI_MODELS.GEMMA, messages, 50000);
+				if (response) {
+					await bot.reply(await markdownToHtml(response), 'HTML');
+					await historyManager.addMessage(task.userId, task.prompt, response);
+				}
+				break;
+			}
+			case 'business_message': {
+				const messages = [
+					{ role: 'system', content: task.systemPrompt || SYSTEM_PROMPTS.SEAN },
+					...task.history,
+					{ role: 'user', content: task.prompt },
+				];
+				let response: AiResponse;
+				if (task.fileId) {
+					const fileResponse = await bot.getFile(task.fileId);
+					const blob = await fileResponse.arrayBuffer();
+					// @ts-expect-error broken bindings
+					response = (await env.AI.run(AI_MODELS.LLAMA, { messages, image: [...new Uint8Array(blob)] }));
+				} else {
+					// @ts-expect-error broken bindings
+					response = (await env.AI.run(AI_MODELS.LLAMA, { messages }));
+				}
+				if (response.response) {
+					const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
+					await bot.reply(await markdownToHtml(aiResponse), 'HTML');
+					await historyManager.addMessage(task.userId, task.prompt, aiResponse);
+				}
+				break;
+			}
+			case 'photo': {
+				const messages = [
+					{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
+					...task.history,
+					{ role: 'user', content: task.prompt },
+				];
+				const fileResponse = await bot.getFile(task.fileId);
+				const blob = await fileResponse.arrayBuffer();
+				// @ts-expect-error broken bindings
+				const response = await env.AI.run(AI_MODELS.GEMMA, {
+					messages,
+					image: [...new Uint8Array(blob)]
+				});
+				// @ts-expect-error broken bindings
+				if ('response' in response && response.response) {
+					const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
+					await bot.reply(await markdownToHtml(aiResponse), 'HTML');
+					await historyManager.addMessage(task.userId, task.prompt, aiResponse);
+				}
+				break;
+			}
+			case 'gen_photo': {
+				// @ts-expect-error broken bindings
+				const photo = (await env.AI.run(AI_MODELS.IMAGEN, { prompt: task.prompt, steps: 8 })) as { image: string };
+				const binaryString = atob(photo.image);
+				// @ts-expect-error broken bindings
+				const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
+				const photoFile = new File([await new Response(img).blob()], 'photo');
+				const id = crypto.randomUUID();
+				await env.R2.put(id, photoFile);
+				await bot.replyPhoto(`https://r2.seanbehan.ca/${id}`);
+				ctx.waitUntil(wrapPromise(async () => { await env.R2.delete(id); }, 500));
+				break;
+			}
+		}
+	} catch (e) {
+		console.error('Error in processTask:', e);
+		await bot.reply(`Error: ${e as string}`);
+	}
+}
+
+async function getBalance(userId: number, env: Environment): Promise<number> {
+	const balanceKey = `balance:${userId}`;
+	let balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number | null);
+	if (balance === null) {
+		balance = 20;
+		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance));
+	}
+	return balance;
+}
+
+async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext, amount = 10) {
+	const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
+	if (!userId) return;
+
+	task.userId = userId;
+	const balanceKey = `balance:${userId}`;
+	const balance = await getBalance(userId, env);
+
+	if (balance >= amount) {
+		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance - amount));
+		await processTask(bot, env, task, historyManager, ctx);
+	} else {
+		if (bot.update_type === 'business_message' || bot.update_type === 'guest_message') {
+			await bot.reply('Insufficient balance. Please go to direct messages and use /load to top up your Stars.');
+		} else {
+			const taskId = crypto.randomUUID();
+			await env.CONVERSATION_HISTORY.put(`task:${taskId}`, JSON.stringify(task), { expirationTtl: 3600 });
+			await bot.sendStarsInvoice('AI Generation', 'Charge for AI message generation', taskId, amount);
+		}
+	}
+}
 
 export default {
 	fetch: async (request: Request, env: Environment, ctx: ExecutionContext) => {
@@ -200,35 +330,41 @@ export default {
 				.on('start', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
 						await bot.reply(
-							'Send me a message to talk to llama3. Use /clear to wipe history. Use /photo to generate a photo. Use /code to generate code.',
+							'Welcome! Here are my commands:\n' +
+							'/balance - Check your current Star balance\n' +
+							'/load <amount> - Top up your balance with Telegram Stars\n' +
+							'/photo <prompt> - Generate an image (20 Stars)\n' +
+							'/code <prompt> - Generate code snippets (10 Stars)\n' +
+							'<prompt> - Generate text (10 Stars)\n' +
+							'/clear - Clear your conversation history\n\n' +
+							'New users start with 20 free credits!',
 						);
 					}
 					return new Response('ok');
 				})
 				.on('code', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
-						await bot.sendTyping();
 						const prompt = bot.update.message?.text?.toString().split(' ').slice(1).join(' ') ?? '';
-						const messages = [{ role: 'user', content: prompt }];
-
-						try {
-							// @ts-expect-error broken bindings
-							const response = await env.AI.run(AI_MODELS.CODER, { messages });
-
-								// @ts-expect-error broken bindings
-							if ('response' in response) {
-								await bot.reply(
-									await markdownToHtml(
-										typeof response.response === 'string' 
-											? response.response 
-											: JSON.stringify(response.response)
-									), 
-									'HTML'
-								);
-							}
-						} catch (e) {
-							console.error('Error in code handler:', e);
-							await bot.reply(`Error: ${e as string}`);
+						await chargeStars(bot, env, { type: 'code', prompt }, historyManager, ctx);
+					}
+					return new Response('ok');
+				})
+				.on('balance', async (bot: TelegramExecutionContext) => {
+					const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
+					if (userId) {
+						const balance = await getBalance(userId, env);
+						await bot.reply(`Your current balance is ${balance} Stars.`);
+					}
+					return new Response('ok');
+				})
+				.on('load', async (bot: TelegramExecutionContext) => {
+					if (bot.update_type === 'message') {
+						const amountStr = bot.update.message?.text?.toString().split(' ')[1];
+						const amount = parseInt(amountStr ?? '0');
+						if (isNaN(amount) || amount <= 0 || amount > 1000) {
+							await bot.reply('Please specify an amount between 1 and 1000 Stars. Example: /load 100');
+						} else {
+							await bot.sendStarsInvoice('Stars Top-up', `Purchase ${amount} Stars`, `load:${amount}`, amount);
 						}
 					}
 					return new Response('ok');
@@ -243,9 +379,7 @@ export default {
 				.on(':message', async (bot: TelegramExecutionContext) => {
 					switch (bot.update_type) {
 						case 'message': {
-							// await bot.sendTyping();
 							let prompt = bot.update.message?.text?.toString() ?? '';
-
 							if (bot.update.message?.reply_to_message) {
 								const reply = bot.update.message.reply_to_message;
 								const replyText = reply.text ?? reply.caption ?? '';
@@ -253,36 +387,15 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-
-							const messageHistory = await historyManager.getHistory(bot.update.message!.from.id);
-
-							const messages = [
-								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
-								...messageHistory,
-								{ role: 'user', content: prompt },
-							];
-
-							try {
-								console.log('Processing text message:', prompt);
-								const response = await streamAiResponseGemma(bot, env, AI_MODELS.GEMMA, messages, 50000);
-
-								if (response) {
-									await bot.reply(await markdownToHtml(response), 'HTML');
-									await historyManager.addMessage(bot.update.message!.from.id, prompt, response);
-								}
-							} catch (e) {
-								console.error('Error in message handler:', e);
-								await bot.reply(`Error: ${e as string}`);
-							}
+							const history = await historyManager.getHistory(bot.update.message!.from.id);
+							await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
 							break;
 						}
 
 						case 'photo': {
-							await bot.sendTyping();
 							const photo = bot.update.message?.photo;
 							const fileId: string = photo ? photo[photo.length - 1]?.file_id ?? '' : '';
 							let prompt = bot.update.message?.caption ?? 'Please describe this image';
-
 							if (bot.update.message?.reply_to_message) {
 								const reply = bot.update.message.reply_to_message;
 								const replyText = reply.text ?? reply.caption ?? '';
@@ -290,46 +403,14 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-
-							console.log('Processing photo:', { fileId, prompt });
-
-							const messageHistory = await historyManager.getHistory(bot.update.message!.from.id);
-
-							const messages = [
-								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
-								...messageHistory,
-								{ role: 'user', content: prompt },
-							];
-
-							try {
-								const fileResponse = await bot.getFile(fileId);
-								const blob = await fileResponse.arrayBuffer();
-								// @ts-expect-error broken bindings
-								const response = await env.AI.run(AI_MODELS.GEMMA, { 
-									messages, 
-									image: [...new Uint8Array(blob)] 
-								});
-
-								// @ts-expect-error broken bindings
-								if ('response' in response && response.response) {
-									const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
-									await bot.reply(
-										await markdownToHtml(aiResponse), 
-										'HTML'
-									);
-
-									await historyManager.addMessage(bot.update.message!.from.id, prompt, aiResponse);
-								}
-							} catch (e) {
-								console.error('Error in photo handler:', e);
-								await bot.reply(`Error processing image: ${e as string}`);
-							}
+							const history = await historyManager.getHistory(bot.update.message!.from.id);
+							await chargeStars(bot, env, { type: 'photo', prompt, history, fileId }, historyManager, ctx, 10);
 							break;
 						}
 
 						case 'inline': {
 							const query = bot.update.inline_query?.query.toString() ?? '';
-							
+
 							// Check if query ends with proper punctuation
 							if (!query.endsWith('.') && !query.endsWith('?')) {
 								await bot.replyInline(
@@ -373,28 +454,8 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-							const messageHistory = await historyManager.getHistory(bot.update.guest_message!.from.id);
-							const messages = [
-								{ role: 'system', content: SYSTEM_PROMPTS.TUX_ROBOT },
-								...messageHistory,
-								{ role: 'user', content: prompt },
-							];
-
-							try {
-								await bot.sendTyping();
-								// @ts-expect-error broken bindings
-								const response = (await env.AI.run(AI_MODELS.GEMMA, { messages })) as AiResponse;
-
-								const content = response.choices?.[0]?.message?.content ?? response.response ?? '';
-
-								if (content) {
-									await bot.reply(await markdownToHtml(content), 'HTML');
-									await historyManager.addMessage(bot.update.guest_message!.from.id, prompt, content);
-								}
-							} catch (e) {
-								console.error('Error in guest message handler:', e);
-								await bot.reply(`Error: ${e instanceof Error ? e.message : String(e)}`);
-							}
+							const history = await historyManager.getHistory(bot.update.guest_message!.from.id);
+							await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
 							break;
 						}
 
@@ -413,35 +474,8 @@ export default {
 							}
 
 							if (bot.update.business_message?.from.id !== 69148517) {
-								const messageHistory = await historyManager.getHistory(bot.update.business_message!.from.id);
-								const messages = [{ role: 'system', content: SYSTEM_PROMPTS.SEAN }, ...messageHistory, { role: 'user', content: prompt }];
-
-								try {
-									let response: AiResponse;
-									
-									if (fileId) {
-										const fileResponse = await bot.getFile(fileId);
-										const blob = await fileResponse.arrayBuffer();
-										// @ts-expect-error broken bindings
-										response = (await env.AI.run(AI_MODELS.LLAMA, { messages, image: [...new Uint8Array(blob)] }));
-									} else {
-										// @ts-expect-error broken bindings
-										response = (await env.AI.run(AI_MODELS.LLAMA, { messages }));
-									}
-
-									if (response.response) {
-										const aiResponse = typeof response.response === 'string' ? response.response : JSON.stringify(response.response);
-										await bot.reply(
-											await markdownToHtml(aiResponse), 
-											'HTML'
-										);
-
-										await historyManager.addMessage(bot.update.business_message!.from.id, prompt, aiResponse);
-									}
-								} catch (e) {
-									console.error('Error in business message handler:', e);
-									await bot.reply(`Error: ${e instanceof Error ? e.message : String(e)}`);
-								}
+								const history = await historyManager.getHistory(bot.update.business_message!.from.id);
+								await chargeStars(bot, env, { type: 'business_message', prompt, history, fileId, systemPrompt: SYSTEM_PROMPTS.SEAN }, historyManager, ctx);
 							}
 							break;
 						}
@@ -458,33 +492,41 @@ export default {
 				})
 				.on('photo', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
-						await bot.sendTyping();
 						const prompt = bot.update.message?.text?.toString() ?? '';
-
-						try {
-							// @ts-expect-error broken bindings
-							const photo = (await env.AI.run(AI_MODELS.FLUX, { prompt, steps: 8 })) as { image: string };
-
-							const binaryString = atob(photo.image);
-							// @ts-expect-error broken bindings
-							const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
-							const photoFile = new File([await new Response(img).blob()], 'photo');
-							const id = crypto.randomUUID();
-
-							await env.R2.put(id, photoFile);
-							console.log(`https://r2.seanbehan.ca/${id}`);
-							await bot.replyPhoto(`https://r2.seanbehan.ca/${id}`);
-
-							ctx.waitUntil(
-								wrapPromise(async () => {
-									await env.R2.delete(id);
-								}, 500),
-							);
-						} catch (e) {
-							console.error('Error in photo handler:', e);
-							await bot.reply(`Error: ${e as string}`);
-						}
+						await chargeStars(bot, env, { type: 'gen_photo', prompt }, historyManager, ctx, 20);
 					}
+					return new Response('ok');
+				})
+				.on(':pre_checkout_query', async (bot: TelegramExecutionContext) => {
+					await bot.answerPreCheckoutQuery(true);
+					return new Response('ok');
+				})
+				.on(':successful_payment', async (bot: TelegramExecutionContext) => {
+					const payment = bot.update.message?.successful_payment;
+					if (!payment) return new Response('ok');
+
+					const payload = payment.invoice_payload;
+					const userId = bot.update.message!.from.id;
+
+					if (payload.startsWith('load:')) {
+						const amount = parseInt(payload.split(':')[1]);
+						const balanceKey = `balance:${userId}`;
+						const balance = (await env.CONVERSATION_HISTORY.get(balanceKey, 'json') as number) || 0;
+						await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance + amount));
+						await bot.reply(`Successfully loaded ${amount} Stars! New balance: ${balance + amount} Stars.`);
+						return new Response('ok');
+					}
+
+					const taskId = payload;
+					const task = await env.CONVERSATION_HISTORY.get(`task:${taskId}`, 'json') as any;
+					if (!task) {
+						await bot.reply('Error: Task not found');
+						return new Response('ok');
+					}
+
+					await processTask(bot, env, task, historyManager, ctx);
+
+					await env.CONVERSATION_HISTORY.delete(`task:${taskId}`);
 					return new Response('ok');
 				})
 				.handle(request.clone()),

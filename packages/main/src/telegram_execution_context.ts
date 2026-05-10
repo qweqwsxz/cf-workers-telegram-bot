@@ -47,6 +47,10 @@ export default class TelegramExecutionContext {
       return 'business_message';
     } else if (this.update.guest_message) {
       return 'guest_message';
+    } else if (this.update.pre_checkout_query) {
+      return 'pre_checkout_query';
+    } else if (this.update.message?.successful_payment) {
+      return 'successful_payment';
     }
     return '';
   }
@@ -272,5 +276,39 @@ export default class TelegramExecutionContext {
       default:
         return null;
     }
+  }
+
+  /**
+   * Send an invoice for Telegram Stars
+   * @param title - product name
+   * @param description - product description
+   * @param payload - bot-defined invoice payload
+   * @param amount - amount of stars
+   * @returns Promise with the API response
+   */
+  async sendStarsInvoice(title: string, description: string, payload: string, amount: number) {
+    return await this.api.sendInvoice(this.bot.api.toString(), {
+      chat_id: this.getChatId(),
+      title,
+      description,
+      payload,
+      provider_token: '',
+      currency: 'XTR',
+      prices: [{ label: title, amount }],
+    });
+  }
+
+  /**
+   * Answer a pre-checkout query
+   * @param ok - whether the payment can proceed
+   * @param error_message - error message if not ok
+   * @returns Promise with the API response
+   */
+  async answerPreCheckoutQuery(ok: boolean, error_message?: string) {
+    return await this.api.answerPreCheckoutQuery(this.bot.api.toString(), {
+      pre_checkout_query_id: this.update.pre_checkout_query?.id ?? '',
+      ok,
+      error_message,
+    });
   }
 }

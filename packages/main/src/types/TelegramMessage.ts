@@ -4,6 +4,7 @@ import TelegramFrom from './TelegramFrom.js';
 import TelegramMessageEntity from './TelegramMessageEntity.js';
 import TelegramPhotoSize from './TelegramPhotoSize.js';
 import TelegramUser from './TelegramUser.js';
+import TelegramSuccessfulPayment from './TelegramSuccessfulPayment.js';
 
 interface TelegramMessage {
 	message_id: number;
@@ -55,7 +56,7 @@ interface TelegramMessage {
 	migrate_from_chat_id?: number;
 	pinned_message?: TelegramMessage;
 	// invoice?: TelegramInvoice;
-	// successful_payment?: TelegramSuccessfulPayment;
+	successful_payment?: TelegramSuccessfulPayment;
 	connected_website?: string;
 	guest_bot_caller_user?: TelegramUser;
 	guest_bot_caller_chat?: TelegramChat;

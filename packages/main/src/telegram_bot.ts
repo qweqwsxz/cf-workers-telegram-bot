@@ -76,6 +76,10 @@ export default class TelegramBot {
         return ':inline' in this.commands ? ':inline' : this.defaultCommand;
       case 'guest_message':
         return ':guest_message' in this.commands ? ':guest_message' : this.defaultCommand;
+      case 'pre_checkout_query':
+        return ':pre_checkout_query' in this.commands ? ':pre_checkout_query' : this.defaultCommand;
+      case 'successful_payment':
+        return ':successful_payment' in this.commands ? ':successful_payment' : this.defaultCommand;
     }
 
     // Then check if it's a command starting with /
