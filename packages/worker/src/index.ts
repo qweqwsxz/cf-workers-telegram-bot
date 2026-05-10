@@ -135,16 +135,44 @@ async function streamAiResponseGemma(
 	messages: { role: string; content: string }[],
 	max_completion_tokens?: number,
 ): Promise<string> {
-	// @ts-expect-error broken bindings
-	const response = (await env.AI.run(model, {
-		messages,
-		stream: true,
-		max_completion_tokens
-	})) as ReadableStream<Uint8Array>;
+	const isGemini = model.startsWith('google/gemini');
+	const payload: any = {};
 
-	const reader = response.getReader();
-	const decoder = new TextDecoder();
+	if (isGemini) {
+		payload.contents = messages.map(m => ({
+			role: m.role === 'assistant' ? 'model' : 'user',
+			parts: [{ text: m.content }]
+		}));
+	} else {
+		payload.messages = messages;
+		payload.stream = true;
+		if (max_completion_tokens) {
+			payload.max_completion_tokens = max_completion_tokens;
+		}
+	}
+
+	// @ts-expect-error broken bindings
+	const response = (await env.AI.run(model, payload, {
+		gateway: { id: 'default' }
+	}));
+
 	const draft_id = Math.floor(Math.random() * 1000000) + 1;
+
+	// Fallback for non-streaming responses
+	if (!(response instanceof ReadableStream)) {
+		const data = response as any;
+		const content = data.choices?.[0]?.message?.content ?? 
+						data.response ?? 
+						data.candidates?.[0]?.content?.parts?.[0]?.text ?? 
+						'';
+		if (content) {
+			await bot.streamReply(await markdownToHtml(content), draft_id, 'HTML');
+		}
+		return content;
+	}
+
+	const reader = (response as ReadableStream<Uint8Array>).getReader();
+	const decoder = new TextDecoder();
 	let fullResponse = '';
 	let lastUpdate = 0;
 	let buffer = '';
@@ -165,8 +193,11 @@ async function streamAiResponseGemma(
 				try {
 					const data = JSON.parse(trimmedLine.slice(6)) as AiResponse;
 
-					// Use the new OpenAI-style path or the legacy response key
-					const content = data.choices?.[0]?.delta?.content ?? data.response ?? '';
+					// Handle standard OpenAI/Gemma format or Google-native format
+					const content = data.choices?.[0]?.delta?.content ?? 
+									data.response ?? 
+									(data as any).candidates?.[0]?.content?.parts?.[0]?.text ?? 
+									'';
 
 					if (content) {
 						fullResponse += content;
@@ -224,7 +255,6 @@ const SYSTEM_PROMPTS = {
 	SEAN: 'You are a friendly person named Sean. Sometimes just acknowledge messages with okay. You are working on coding a cool telegram bot.',
 };
 
-// AI model constants
 const AI_MODELS = {
 	LLAMA: '@cf/meta/llama-3.2-11b-vision-instruct',
 	CODER: '@cf/google/gemma-4-26b-a4b-it',
@@ -233,13 +263,20 @@ const AI_MODELS = {
 	GEMMA: '@cf/google/gemma-4-26b-a4b-it',
 };
 
+const AVAILABLE_MODELS: Record<string, { id: string, cost: number }> = {
+	'gemma4': { id: '@cf/google/gemma-4-26b-a4b-it', cost: 10 },
+	'google/gemini-3-flash': { id: 'google/gemini-3-flash', cost: 30 },
+	'google/gemini-3.1-flash-lite': { id: 'google/gemini-3.1-flash-lite', cost: 20 },
+	'google/gemini-3.1-pro': { id: 'google/gemini-3.1-pro', cost: 100 }
+};
+
 async function processTask(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext) {
 	await bot.sendTyping();
 	try {
 		switch (task.type) {
 			case 'code': {
 				const messages = [{ role: 'user', content: task.prompt }];
-				const response = await streamAiResponseGemma(bot, env, AI_MODELS.CODER, messages, 50000);
+				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.CODER, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 				}
@@ -251,7 +288,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					...task.history,
 					{ role: 'user', content: task.prompt },
 				];
-				const response = await streamAiResponseGemma(bot, env, AI_MODELS.GEMMA, messages, 50000);
+				const response = await streamAiResponseGemma(bot, env, task.modelId || AI_MODELS.GEMMA, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					await historyManager.addMessage(task.userId, task.prompt, response);
@@ -354,13 +391,19 @@ async function getBalance(userId: number, env: Environment): Promise<number> {
 	return balance;
 }
 
-async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext, amount = 10) {
+async function chargeStars(bot: TelegramExecutionContext, env: Environment, task: any, historyManager: HistoryManager, ctx: ExecutionContext, amountOverride?: number) {
 	const userId = bot.update.message?.from.id || bot.update.business_message?.from.id || bot.update.guest_message?.from.id;
 	if (!userId) return;
 
 	task.userId = userId;
 	const balanceKey = `balance:${userId}`;
 	const balance = await getBalance(userId, env);
+
+	// Determine model and cost
+	const modelPreference = await env.CONVERSATION_HISTORY.get(`model:${userId}`) || 'gemma4';
+	const modelConfig = AVAILABLE_MODELS[modelPreference] || AVAILABLE_MODELS['gemma4'];
+	const amount = amountOverride !== undefined ? amountOverride : modelConfig.cost;
+	task.modelId = modelConfig.id;
 
 	if (balance >= amount) {
 		await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance - amount));
@@ -432,8 +475,9 @@ export default {
 							'/balance - Check your current Star balance\n' +
 							'/load <amount> - Top up your balance with Telegram Stars\n' +
 							'/photo <prompt> - Generate an image (100 Stars)\n' +
-							'/code <prompt> - Generate code snippets (10 Stars)\n' +
-							'<prompt> - Generate text (10 Stars)\n' +
+							'/model <name> - Switch AI model and see costs\n' +
+							'/code <prompt> - Generate code snippets\n' +
+							'<prompt> - Generate text\n' +
 							'/clear - Clear your conversation history\n\n' +
 							'New users start with 200 free credits!',
 						);
@@ -585,6 +629,32 @@ export default {
 								console.log("couldn't json.stringify update...", bot.update)
 							}
 							break;
+					}
+					return new Response('ok');
+				})
+				.on('model', async (bot: TelegramExecutionContext) => {
+					if (bot.update_type === 'message') {
+						const userId = bot.update.message!.from.id;
+						const modelKey = `model:${userId}`;
+						const args = bot.update.message?.text?.toString().split(' ') || [];
+
+						if (args.length > 1) {
+							const selectedModel = args[1].toLowerCase();
+							if (selectedModel in AVAILABLE_MODELS) {
+								await env.CONVERSATION_HISTORY.put(modelKey, selectedModel);
+								await bot.reply(`Model updated to <b>${selectedModel}</b>.`, 'HTML');
+							} else {
+								await bot.reply(`Invalid model. Available models:\n${Object.keys(AVAILABLE_MODELS).join('\n')}`);
+							}
+						} else {
+							const currentModel = (await env.CONVERSATION_HISTORY.get(modelKey)) || 'gemma4';
+							await bot.reply(
+								`Current model: <b>${currentModel}</b>\n\n` +
+								`Available models:\n` +
+								Object.entries(AVAILABLE_MODELS).map(([name, cfg]) => `- <code>${name}</code> (${cfg.cost} Stars)`).join('\n'),
+								'HTML'
+							);
+						}
 					}
 					return new Response('ok');
 				})
