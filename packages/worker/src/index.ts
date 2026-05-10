@@ -169,7 +169,7 @@ const SYSTEM_PROMPTS = {
 const AI_MODELS = {
 	LLAMA: '@cf/meta/llama-3.2-11b-vision-instruct',
 	CODER: '@hf/thebloke/deepseek-coder-6.7b-instruct-awq',
-	IMAGEN: '@cf/google/imagen-4',
+	IMAGEN: 'google/imagen-4',
 	STABLE_DIFFUSION: '@cf/stabilityai/stable-diffusion-xl-base-1.0',
 	GEMMA: '@cf/google/gemma-4-26b-a4b-it',
 };
@@ -254,15 +254,37 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 			}
 			case 'gen_photo': {
 				// @ts-expect-error broken bindings
-				const photo = (await env.AI.run(AI_MODELS.IMAGEN, { prompt: task.prompt, steps: 8 })) as { image: string };
-				const binaryString = atob(photo.image);
-				// @ts-expect-error broken bindings
-				const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
-				const photoFile = new File([await new Response(img).blob()], 'photo');
-				const id = crypto.randomUUID();
-				await env.R2.put(id, photoFile);
-				await bot.replyPhoto(`https://r2.seanbehan.ca/${id}`);
-				ctx.waitUntil(wrapPromise(async () => { await env.R2.delete(id); }, 500));
+				const photo: any = await env.AI.run(
+					AI_MODELS.IMAGEN,
+					{ prompt: task.prompt },
+					{ gateway: { id: 'default' } }
+				);
+
+				let imgUrl: string | null = null;
+				let imgData: ArrayBuffer | Uint8Array | null = null;
+
+				if (photo?.result?.image && photo.result.image.startsWith('http')) {
+					imgUrl = photo.result.image;
+				} else if (photo?.image || photo?.result?.image) {
+					const data = photo.image || photo.result.image;
+					const base64Data = data.includes(',') ? data.split(',')[1] : data;
+					const binaryString = atob(base64Data);
+					imgData = Uint8Array.from(binaryString, (m) => m.codePointAt(0)!);
+				} else if (photo instanceof ReadableStream || photo instanceof ArrayBuffer || (typeof Uint8Array !== 'undefined' && photo instanceof Uint8Array)) {
+					imgData = photo instanceof ReadableStream ? await new Response(photo).arrayBuffer() : photo;
+				} else {
+					throw new Error(`Unexpected response format from AI: ${JSON.stringify(photo)}`);
+				}
+
+				if (imgUrl) {
+					await bot.replyPhoto(imgUrl);
+				} else if (imgData) {
+					const photoFile = new File([imgData], 'photo');
+					const id = crypto.randomUUID();
+					await env.R2.put(id, photoFile);
+					await bot.replyPhoto(`https://r2.seanbehan.ca/${id}`);
+					ctx.waitUntil(wrapPromise(async () => { await env.R2.delete(id); }, 500));
+				}
 				break;
 			}
 		}
@@ -311,6 +333,21 @@ export default {
 		const translatepartybot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN3);
 		const historyManager = new HistoryManager(env.CONVERSATION_HISTORY);
 
+		const url = new URL(request.url);
+		if (url.pathname === '/add-credits') {
+			const userId = parseInt(url.searchParams.get('userId') || '0');
+			const amount = parseInt(url.searchParams.get('amount') || '0');
+			if (userId && !isNaN(amount)) {
+				const balanceKey = `balance:${userId}`;
+				const balance = await getBalance(userId, env);
+				await env.CONVERSATION_HISTORY.put(balanceKey, JSON.stringify(balance + amount));
+				return new Response(JSON.stringify({ success: true, userId, newBalance: balance + amount }), {
+					headers: { 'Content-Type': 'application/json' },
+				});
+			}
+			return new Response('Invalid params. Usage: /add-credits?userId=<id>&amount=<amount>', { status: 400 });
+		}
+
 		await Promise.all([
 			tuxrobot
 				.on(':document', async (bot: TelegramExecutionContext) => {
@@ -333,7 +370,7 @@ export default {
 							'Welcome! Here are my commands:\n' +
 							'/balance - Check your current Star balance\n' +
 							'/load <amount> - Top up your balance with Telegram Stars\n' +
-							'/photo <prompt> - Generate an image (20 Stars)\n' +
+							'/photo <prompt> - Generate an image (100 Stars)\n' +
 							'/code <prompt> - Generate code snippets (10 Stars)\n' +
 							'<prompt> - Generate text (10 Stars)\n' +
 							'/clear - Clear your conversation history\n\n' +
@@ -493,7 +530,7 @@ export default {
 				.on('photo', async (bot: TelegramExecutionContext) => {
 					if (bot.update_type === 'message') {
 						const prompt = bot.update.message?.text?.toString() ?? '';
-						await chargeStars(bot, env, { type: 'gen_photo', prompt }, historyManager, ctx, 20);
+						await chargeStars(bot, env, { type: 'gen_photo', prompt }, historyManager, ctx, 100);
 					}
 					return new Response('ok');
 				})
