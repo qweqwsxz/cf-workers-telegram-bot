@@ -109,6 +109,29 @@ export default class TelegramApi {
   }
 
   /**
+   * Fetch a URL and log the response
+   * @param url - the URL to fetch
+   * @param slug - the API method name
+   * @param data - the data sent to the API
+   * @returns Promise with the API response
+   */
+  private async fetchAndLog(url: Request, slug: string, data: TelegramApiParams): Promise<Response> {
+    const response = await fetch(url);
+    const cloned = response.clone();
+    try {
+      const json = await cloned.json();
+      console.log({
+        method: slug,
+        params: data,
+        response: json,
+      });
+    } catch (e) {
+      console.error(`Error logging response for ${slug}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return response;
+  }
+
+  /**
    * Send a chat action to indicate the bot is doing something
    * @param botApi - full URL to the telegram API without slug
    * @param data - data to append to the request
@@ -116,7 +139,7 @@ export default class TelegramApi {
    */
   async sendChatAction(botApi: string, data: SendChatActionParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendChatAction', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'sendChatAction', data);
   }
 
   /**
@@ -133,7 +156,7 @@ export default class TelegramApi {
 
     try {
       const url = this.getApiUrl(botApi, 'getFile', data);
-      const response = await fetch(url);
+      const response = await this.fetchAndLog(url, 'getFile', data);
 
       if (!response.ok) {
         return new Response(`API error: ${String(response.status)} ${response.statusText}`, { status: response.status });
@@ -160,7 +183,7 @@ export default class TelegramApi {
    */
   async sendMessage(botApi: string, data: SendMessageParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendMessage', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'sendMessage', data);
   }
 
   /**
@@ -171,7 +194,7 @@ export default class TelegramApi {
    */
   async sendVideo(botApi: string, data: SendVideoParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendVideo', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'sendVideo', data);
   }
 
   /**
@@ -182,7 +205,7 @@ export default class TelegramApi {
    */
   async sendPhoto(botApi: string, data: SendPhotoParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendPhoto', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'sendPhoto', data);
   }
 
   /**
@@ -192,14 +215,15 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async answerInline(botApi: string, data: AnswerInlineParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, 'answerInlineQuery', {
+    const params = {
       inline_query_id: data.inline_query_id,
       results: data.results,
       cache_time: data.cache_time,
       is_personal: data.is_personal,
       next_offset: data.next_offset,
-    });
-    return await fetch(url);
+    };
+    const url = this.getApiUrl(botApi, 'answerInlineQuery', params);
+    return await this.fetchAndLog(url, 'answerInlineQuery', params);
   }
 
   /**
@@ -210,7 +234,7 @@ export default class TelegramApi {
    */
   async answerCallback(botApi: string, data: AnswerCallbackParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'answerCallbackQuery', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'answerCallbackQuery', data);
   }
 
   /**
@@ -221,7 +245,7 @@ export default class TelegramApi {
    */
   async answerGuestQuery(botApi: string, data: AnswerGuestParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'answerGuestQuery', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'answerGuestQuery', data);
   }
 
   /**
@@ -232,7 +256,7 @@ export default class TelegramApi {
    */
   async deleteMessage(botApi: string, data: { chat_id: number | string; message_id: number }): Promise<Response> {
     const url = this.getApiUrl(botApi, 'deleteMessage', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'deleteMessage', data);
   }
 
   /**
@@ -254,7 +278,7 @@ export default class TelegramApi {
     },
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'editMessageText', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'editMessageText', data);
   }
 
   async sendMessageDraft(
@@ -262,6 +286,6 @@ export default class TelegramApi {
     data: SendMessageDraftParams,
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendMessageDraft', data);
-    return await fetch(url);
+    return await this.fetchAndLog(url, 'sendMessageDraft', data);
   }
 }

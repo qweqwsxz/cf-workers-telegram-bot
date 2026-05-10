@@ -39,7 +39,19 @@ export default class Webhook {
     });
 
     try {
-      return await fetch(`${url.toString()}?${params.toString()}`);
+      const response = await fetch(`${url.toString()}?${params.toString()}`);
+      const cloned = response.clone();
+      try {
+        const json = await cloned.json();
+        console.log({
+          method: 'setWebhook',
+          params: Object.fromEntries(params),
+          response: json,
+        });
+      } catch (e) {
+        console.error(`Error logging response for setWebhook: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return response;
     } catch (error) {
       console.error('Failed to set webhook:', error);
       throw error;
@@ -57,7 +69,18 @@ export default class Webhook {
     const url = new URL(`${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}deleteWebhook`);
 
     try {
-      return await fetch(url.toString());
+      const response = await fetch(url.toString());
+      const cloned = response.clone();
+      try {
+        const json = await cloned.json();
+        console.log({
+          method: 'deleteWebhook',
+          response: json,
+        });
+      } catch (e) {
+        console.error(`Error logging response for deleteWebhook: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return response;
     } catch (error) {
       console.error('Failed to delete webhook:', error);
       throw error;

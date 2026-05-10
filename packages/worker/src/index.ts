@@ -36,8 +36,8 @@ async function markdownToHtml(s: string): Promise<string> {
 	marked.setOptions(marked.getDefaults());
 	const parsed = (await marked.parse(s)) as string | { toString(): string };
 	const parsedString = typeof parsed === 'string' ? parsed : parsed.toString();
-	const tagsToRemove = ['p', 'ol', 'ul', 'li', 'h1', 'h2', 'h3'];
-	const tagPattern = new RegExp(tagsToRemove.map((tag) => `<${tag}>|</${tag}>`).join('|'), 'g');
+	const tagsToRemove = ['p', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr'];
+	const tagPattern = new RegExp(tagsToRemove.map((tag) => `<${tag}[^>]*>|</${tag}>`).join('|'), 'g');
 	return parsedString.replace(tagPattern, '');
 }
 
