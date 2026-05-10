@@ -430,7 +430,10 @@ export default {
 		const historyManager = new HistoryManager(env.CONVERSATION_HISTORY);
 
 		const url = new URL(request.url);
-		if (url.pathname === '/add-credits') {
+		const tokens = [env.SECRET_TELEGRAM_API_TOKEN, env.SECRET_TELEGRAM_API_TOKEN2, env.SECRET_TELEGRAM_API_TOKEN3];
+		const token = tokens.find(t => url.pathname.startsWith(`/${t}`));
+
+		if (token && url.pathname.endsWith('/add-credits')) {
 			const userId = parseInt(url.searchParams.get('userId') || '0');
 			const amount = parseInt(url.searchParams.get('amount') || '0');
 			if (userId && !isNaN(amount)) {
@@ -441,7 +444,7 @@ export default {
 					headers: { 'Content-Type': 'application/json' },
 				});
 			}
-			return new Response('Invalid params. Usage: /add-credits?userId=<id>&amount=<amount>', { status: 400 });
+			return new Response('Invalid params. Usage: /<token>/add-credits?userId=<id>&amount=<amount>', { status: 400 });
 		}
 		if (request.method === 'POST') {
 			const clonedRequest = request.clone();
