@@ -35,7 +35,7 @@ export default class TelegramUpdate {
 		this.business_message = update.business_message;
 		this.guest_message = update.guest_message;
 		// chosen_inline_result = update.chosen_inline_result;
-		// callback_query = update.callback_query;
+		this.callback_query = update.callback_query;
 		// shipping_query = update.shipping_query;
 		this.pre_checkout_query = update.pre_checkout_query;
 		// poll = update.poll;
