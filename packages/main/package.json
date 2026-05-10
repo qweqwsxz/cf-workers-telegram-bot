@@ -19,6 +19,9 @@
 	],
 	"type": "module",
 	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsc --project tsconfig.json",
 		"lint": "eslint src",
