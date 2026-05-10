@@ -35,10 +35,65 @@ function wrapPromise<T>(func: promiseFunc<T>, time = 1000) {
 async function markdownToHtml(s: string): Promise<string> {
 	marked.setOptions(marked.getDefaults());
 	const parsed = (await marked.parse(s)) as string | { toString(): string };
-	const parsedString = typeof parsed === 'string' ? parsed : parsed.toString();
-	const tagsToRemove = ['p', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr'];
-	const tagPattern = new RegExp(tagsToRemove.map((tag) => `<${tag}[^>]*>|</${tag}>`).join('|'), 'g');
-	return parsedString.replace(tagPattern, '');
+	const html = typeof parsed === 'string' ? parsed : parsed.toString();
+
+	const allowedTags = ['b', 'i', 'u', 's', 'code', 'pre', 'a', 'blockquote'];
+	const tagStack: string[] = [];
+	let result = '';
+	let i = 0;
+
+	while (i < html.length) {
+		if (html[i] === '<') {
+			const tagMatch = html.slice(i).match(/^<\/?([a-z1-6]+)(?:\s+[^>]*)?>/i);
+			if (tagMatch) {
+				const fullTag = tagMatch[0];
+				const tagName = tagMatch[1].toLowerCase();
+				const isClosing = fullTag.startsWith('</');
+
+				if (allowedTags.includes(tagName)) {
+					if (isClosing) {
+						if (tagStack.includes(tagName)) {
+							while (tagStack.length > 0) {
+								const top = tagStack.pop()!;
+								result += `</${top}>`;
+								if (top === tagName) break;
+							}
+						}
+					} else {
+						tagStack.push(tagName);
+						if (tagName === 'a') {
+							const hrefMatch = fullTag.match(/href="([^"]*)"/i);
+							result += hrefMatch ? `<a href="${hrefMatch[1]}">` : '<a>';
+						} else {
+							result += `<${tagName}>`;
+						}
+					}
+				}
+				i += fullTag.length;
+				continue;
+			}
+		}
+
+		if (html[i] === '<') result += '&lt;';
+		else if (html[i] === '>') result += '&gt;';
+		else if (html[i] === '&') {
+			// Check if it's already an entity
+			const entityMatch = html.slice(i).match(/^&[a-z0-9#]+;/i);
+			if (entityMatch) {
+				result += entityMatch[0];
+				i += entityMatch[0].length;
+				continue;
+			}
+			result += '&amp;';
+		} else result += html[i];
+		i++;
+	}
+
+	while (tagStack.length > 0) {
+		result += `</${tagStack.pop()}>`;
+	}
+
+	return result;
 }
 
 interface AiResponse {
@@ -118,7 +173,11 @@ async function streamAiResponseGemma(
 
 						// Throttle updates to Telegram (1000ms is sensible to avoid rate limits)
 						if (Date.now() - lastUpdate > 1000) {
-							await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
+							try {
+								await bot.streamReply(await markdownToHtml(fullResponse), draft_id, 'HTML');
+							} catch (e) {
+								// Ignore temporary parse errors during streaming
+							}
 							lastUpdate = Date.now();
 						}
 					}
@@ -168,7 +227,7 @@ const SYSTEM_PROMPTS = {
 // AI model constants
 const AI_MODELS = {
 	LLAMA: '@cf/meta/llama-3.2-11b-vision-instruct',
-	CODER: '@hf/thebloke/deepseek-coder-6.7b-instruct-awq',
+	CODER: '@cf/google/gemma-4-26b-a4b-it',
 	IMAGEN: 'google/imagen-4',
 	STABLE_DIFFUSION: '@cf/stabilityai/stable-diffusion-xl-base-1.0',
 	GEMMA: '@cf/google/gemma-4-26b-a4b-it',
@@ -180,19 +239,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 		switch (task.type) {
 			case 'code': {
 				const messages = [{ role: 'user', content: task.prompt }];
-				// @ts-expect-error broken bindings
-				const response = await env.AI.run(AI_MODELS.CODER, { messages });
-				// @ts-expect-error broken bindings
-				if ('response' in response) {
-					await bot.reply(
-						await markdownToHtml(
-							typeof response.response === 'string'
-								? response.response
-								: JSON.stringify(response.response)
-						),
-						'HTML'
-					);
-				}
+				await streamAiResponseGemma(bot, env, AI_MODELS.CODER, messages, 50000);
 				break;
 			}
 			case 'message': {
