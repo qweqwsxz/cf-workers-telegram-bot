@@ -10,7 +10,7 @@
 		"test:worker": "npm run test --workspace=packages/worker",
 		"test:main": "npm run test --workspace=packages/main",
 		"lint": "npm run lint --workspaces",
-		"docs": "typedoc --entryPointStrategy packages . --out docs",
+		"docs": "typedoc --options typedoc.json",
 		"deploy:docs": "npm run docs && wrangler pages deploy docs",
 		"sync:readme": "cp README.md packages/main/README.md",
 		"ncu": "npx npm-check-updates -i --workspaces --root -u"
@@ -22,7 +22,8 @@
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^8.59.2",
 		"npm-check-updates": "^22.1.1",
-		"typedoc": "^0.28.19"
+		"typedoc": "^0.28.19",
+		"typedoc-plugin-extras": "^4.0.1"
 	},
 	"version": "",
 	"dependencies": {

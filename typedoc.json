@@ -1,0 +1,17 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["."],
+  "out": "docs",
+  "name": "CF Workers Telegram Bot",
+  "includeVersion": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "hideGenerator": true,
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "titleLink": "https://codebam.github.io/cf-workers-telegram-bot/",
+  "githubPages": true,
+  "plugin": ["typedoc-plugin-extras"],
+  "customDescription": "A lightweight, type-safe Telegram Bot library for Cloudflare Workers. Build and deploy bots with ease."
+}
