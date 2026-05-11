@@ -27,8 +27,8 @@ export default class TelegramBot {
    *	@param options - optional configuration for the bot
    */
   constructor(token: string, options?: { defaultCommand?: string }) {
-    this.token = token;
-    this.api = new URL('https://api.telegram.org/bot' + token);
+    this.token = token.trim();
+    this.api = new URL('https://api.telegram.org/bot' + this.token);
 
     if (options?.defaultCommand) {
       this.defaultCommand = options.defaultCommand;
