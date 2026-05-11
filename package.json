@@ -10,6 +10,7 @@
 		"test:worker": "npm run test --workspace=packages/worker",
 		"test:main": "npm run test --workspace=packages/main",
 		"lint": "npm run lint --workspaces",
+		"docs": "typedoc --entryPointStrategy packages . --out docs",
 		"ncu": "npx npm-check-updates -i --workspaces --root -u"
 	},
 	"workspaces": [

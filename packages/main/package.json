@@ -48,5 +48,10 @@
 	},
 	"dependencies": {
 		"typedoc": "0.28.19"
+	},
+	"typedocOptions": {
+		"entryPoints": [
+			"./src/main.ts"
+		]
 	}
 }

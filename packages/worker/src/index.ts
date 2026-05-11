@@ -1,4 +1,4 @@
-import TelegramBot, { TelegramExecutionContext, TelegramUpdate } from '../../main/src/main.js';
+import TelegramBot, { TelegramExecutionContext, TelegramUpdate } from '@codebam/cf-workers-telegram-bot';
 import { marked } from 'marked';
 
 export interface Environment {
@@ -186,7 +186,7 @@ async function streamAiResponseGemma(
 		}
 	}
 
-	// @ts-expect-error broken bindings
+	
 	const response = (await env.AI.run(model, payload, {
 		gateway: { id: 'default' }
 	}));
@@ -326,7 +326,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId, task.prompt, response);
+					await historyManager.addMessage(task.userId!, task.prompt, response);
 				}
 				break;
 			}
@@ -345,7 +345,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.LLAMA, messages, 50000, image);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId, task.prompt, response);
+					await historyManager.addMessage(task.userId!, task.prompt, response);
 				}
 				break;
 			}
@@ -355,18 +355,18 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					...(task.history ?? []),
 					{ role: 'user', content: task.prompt },
 				];
-				const fileResponse = await bot.getFile(task.fileId);
+				const fileResponse = await bot.getFile(task.fileId!);
 				const blob = await fileResponse.arrayBuffer();
 				const image = [...new Uint8Array(blob)];
 				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000, image);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId, task.prompt, response);
+					await historyManager.addMessage(task.userId!, task.prompt, response);
 				}
 				break;
 			}
 			case 'gen_photo': {
-				// @ts-expect-error broken bindings
+				
 				const rawPhoto = await env.AI.run(
 					AI_MODELS.IMAGEN,
 					{ prompt: task.prompt },
@@ -609,7 +609,6 @@ export default {
 							];
 
 							try {
-								// @ts-expect-error broken bindings
 								const rawResponse = await env.AI.run(AI_MODELS.LLAMA, { messages, max_completion_tokens: 100 });
 								const aiResponse = rawResponse as AiResponse;
 
