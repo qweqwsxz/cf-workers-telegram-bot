@@ -136,6 +136,9 @@ export default class TelegramApi {
    */
   private async fetchAndLog(url: Request, slug: string, data: TelegramApiParams): Promise<Response> {
     const response = await fetch(url);
+    if (response.status !== 200) {
+      throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}`);
+    }
     const cloned = response.clone();
     try {
       const json = await cloned.json();
@@ -170,28 +173,23 @@ export default class TelegramApi {
    */
   async getFile(botApi: string, data: { file_id: string } & Record<string, number | string | boolean>, token: string): Promise<Response> {
     if (!data.file_id || data.file_id === '') {
-      return new Response('No file_id provided', { status: 400 });
+      throw new Error('No file_id provided');
     }
 
-    try {
-      const url = this.getApiUrl(botApi, 'getFile', data);
-      const response = await this.fetchAndLog(url, 'getFile', data);
+    const url = this.getApiUrl(botApi, 'getFile', data);
+    const response = await this.fetchAndLog(url, 'getFile', data);
 
-      if (!response.ok) {
-        return new Response(`API error: ${String(response.status)} ${response.statusText}`, { status: response.status });
-      }
+    const json: { ok: boolean; result?: { file_path: string }; description?: string } = await response.json();
 
-      const json: { ok: boolean; result?: { file_path: string }; description?: string } = await response.json();
-
-      if (!json.ok || !json.result?.file_path) {
-        return new Response(json.description ?? 'Failed to get file path', { status: 400 });
-      }
-
-      return await fetch(`https://api.telegram.org/file/bot${token}/${json.result.file_path}`);
-    } catch (e) {
-      console.error(`Error in getFile: ${e instanceof Error ? e.message : String(e)}`);
-      return new Response(`Error retrieving file: ${e instanceof Error ? e.message : String(e)}`, { status: 500 });
+    if (!json.ok || !json.result?.file_path) {
+      throw new Error(json.description ?? 'Failed to get file path');
     }
+
+    const fileResponse = await fetch(`https://api.telegram.org/file/bot${token}/${json.result.file_path}`);
+    if (fileResponse.status !== 200) {
+      throw new Error(`Telegram File API error: ${String(fileResponse.status)} ${fileResponse.statusText}`);
+    }
+    return fileResponse;
   }
 
   /**

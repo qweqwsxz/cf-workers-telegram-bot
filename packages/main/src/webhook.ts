@@ -40,6 +40,9 @@ export default class Webhook {
 
     try {
       const response = await fetch(`${url.toString()}?${params.toString()}`);
+      if (response.status !== 200) {
+        throw new Error(`Telegram API error (setWebhook): ${String(response.status)} ${response.statusText}`);
+      }
       const cloned = response.clone();
       try {
         const json = await cloned.json();
@@ -70,6 +73,9 @@ export default class Webhook {
 
     try {
       const response = await fetch(url.toString());
+      if (response.status !== 200) {
+        throw new Error(`Telegram API error (deleteWebhook): ${String(response.status)} ${response.statusText}`);
+      }
       const cloned = response.clone();
       try {
         const json = await cloned.json();
