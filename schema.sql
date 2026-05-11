@@ -1,1 +1,0 @@
-CREATE TABLE IF NOT EXISTS Messages (id TEXT PRIMARY KEY, userId TEXT, content TEXT);
