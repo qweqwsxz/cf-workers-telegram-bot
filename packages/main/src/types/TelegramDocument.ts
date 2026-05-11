@@ -9,3 +9,4 @@ export interface TelegramDocument {
 	file_size: number;
 }
 
+export default TelegramDocument;

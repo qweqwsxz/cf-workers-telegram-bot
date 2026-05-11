@@ -1,7 +1,20 @@
 import TelegramBot from './telegram_bot.js';
 import TelegramExecutionContext from './telegram_execution_context.js';
 import Webhook from './webhook.js';
-import TelegramApi from './telegram_api.js';
+import TelegramApi, {
+	TelegramApiBaseParams,
+	SendMessageParams,
+	SendMessageDraftParams,
+	SendPhotoParams,
+	SendVideoParams,
+	SendChatActionParams,
+	AnswerCallbackParams,
+	AnswerInlineParams,
+	AnswerGuestParams,
+	SendInvoiceParams,
+	AnswerPreCheckoutParams,
+	TelegramApiParams,
+} from './telegram_api.js';
 import TelegramCommand from './types/TelegramCommand.js';
 import TelegramFrom from './types/TelegramFrom.js';
 import TelegramChat from './types/TelegramChat.js';
@@ -18,7 +31,13 @@ import TelegramInlineQueryType from './types/TelegramInlineQueryType.js';
 import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
 import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
 import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultArticle.js';
+import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
 import ChatPermissions from './types/ChatPermissions.js';
+import TelegramBusinessMessage from './types/TelegramBusinessMessage.js';
+import TelegramCallbackQuery from './types/TelegramCallbackQuery.js';
+import TelegramPreCheckoutQuery from './types/TelegramPreCheckoutQuery.js';
+import TelegramDocument from './types/TelegramDocument.js';
+import TelegramSuccessfulPayment from './types/TelegramSuccessfulPayment.js';
 
 export default TelegramBot;
 export {
@@ -26,6 +45,18 @@ export {
 	TelegramExecutionContext,
 	Webhook,
 	TelegramApi,
+	TelegramApiBaseParams,
+	SendMessageParams,
+	SendMessageDraftParams,
+	SendPhotoParams,
+	SendVideoParams,
+	SendChatActionParams,
+	AnswerCallbackParams,
+	AnswerInlineParams,
+	AnswerGuestParams,
+	SendInvoiceParams,
+	AnswerPreCheckoutParams,
+	TelegramApiParams,
 	TelegramCommand,
 	TelegramFrom,
 	TelegramChat,
@@ -42,5 +73,11 @@ export {
 	TelegramInlineQueryResult,
 	TelegramInlineQueryResultPhoto,
 	TelegramInlineQueryResultArticle,
+	TelegramInlineQueryResultVideo,
 	ChatPermissions,
+	TelegramBusinessMessage,
+	TelegramCallbackQuery,
+	TelegramPreCheckoutQuery,
+	TelegramDocument,
+	TelegramSuccessfulPayment,
 };

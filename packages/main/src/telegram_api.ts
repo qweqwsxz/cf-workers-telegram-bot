@@ -3,13 +3,13 @@ import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPho
 import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
 
 /** Interface for common Telegram API parameters */
-interface TelegramApiBaseParams {
+export interface TelegramApiBaseParams {
   chat_id: number | string;
   business_connection_id?: string | number;
 }
 
 /** Interface for message parameters */
-interface SendMessageParams extends TelegramApiBaseParams {
+export interface SendMessageParams extends TelegramApiBaseParams {
   text: string;
   parse_mode: string;
   reply_to_message_id?: number | string;
@@ -20,12 +20,12 @@ interface SendMessageParams extends TelegramApiBaseParams {
 }
 
 /** Interface for message draft parameters */
-interface SendMessageDraftParams extends SendMessageParams {
+export interface SendMessageDraftParams extends SendMessageParams {
   draft_id: number;
 }
 
 /** Interface for photo parameters */
-interface SendPhotoParams extends TelegramApiBaseParams {
+export interface SendPhotoParams extends TelegramApiBaseParams {
   photo: string;
   caption?: string;
   parse_mode?: string;
@@ -36,7 +36,7 @@ interface SendPhotoParams extends TelegramApiBaseParams {
 }
 
 /** Interface for video parameters */
-interface SendVideoParams extends TelegramApiBaseParams {
+export interface SendVideoParams extends TelegramApiBaseParams {
   video: string;
   caption?: string;
   parse_mode?: string;
@@ -47,12 +47,12 @@ interface SendVideoParams extends TelegramApiBaseParams {
 }
 
 /** Interface for chat action parameters */
-interface SendChatActionParams extends TelegramApiBaseParams {
+export interface SendChatActionParams extends TelegramApiBaseParams {
   action: string;
 }
 
 /** Interface for callback query parameters */
-interface AnswerCallbackParams {
+export interface AnswerCallbackParams {
   callback_query_id: number | string;
   text?: string;
   show_alert?: boolean;
@@ -61,7 +61,7 @@ interface AnswerCallbackParams {
 }
 
 /** Interface for inline query parameters */
-interface AnswerInlineParams {
+export interface AnswerInlineParams {
   inline_query_id: number | string;
   results: TelegramInlineQueryResultArticle[] | TelegramInlineQueryResultPhoto[] | TelegramInlineQueryResultVideo[];
   cache_time?: number;
@@ -70,13 +70,13 @@ interface AnswerInlineParams {
 }
 
 /** Interface for guest query parameters */
-interface AnswerGuestParams {
+export interface AnswerGuestParams {
   guest_query_id: string;
   result: TelegramInlineQueryResultArticle | TelegramInlineQueryResultPhoto | TelegramInlineQueryResultVideo;
 }
 
 /** Interface for invoice parameters */
-interface SendInvoiceParams extends TelegramApiBaseParams {
+export interface SendInvoiceParams extends TelegramApiBaseParams {
   title: string;
   description: string;
   payload: string;
@@ -86,14 +86,14 @@ interface SendInvoiceParams extends TelegramApiBaseParams {
 }
 
 /** Interface for pre-checkout query parameters */
-interface AnswerPreCheckoutParams {
+export interface AnswerPreCheckoutParams {
   pre_checkout_query_id: string;
   ok: boolean;
   error_message?: string;
 }
 
 /** Type for all possible API parameters */
-type TelegramApiParams =
+export type TelegramApiParams =
   | SendMessageParams
   | SendPhotoParams
   | SendVideoParams

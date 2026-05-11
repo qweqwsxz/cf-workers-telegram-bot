@@ -11,6 +11,7 @@
 		"test:main": "npm run test --workspace=packages/main",
 		"lint": "npm run lint --workspaces",
 		"docs": "typedoc --entryPointStrategy packages . --out docs",
+		"deploy:docs": "npm run docs && wrangler pages deploy docs",
 		"ncu": "npx npm-check-updates -i --workspaces --root -u"
 	},
 	"workspaces": [
