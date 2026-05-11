@@ -26,7 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run lint --workspace=packages
       - run: npm run test --workspace=packages
-      - run: npm run build --workspace=packages
+      - run: npm run build
   merge-dependabot:
     needs: build
     runs-on: ubuntu-latest

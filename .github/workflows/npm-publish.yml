@@ -26,5 +26,5 @@ jobs:
       - run: npm i
       - run: npm ci
       - run: npm run lint --workspace=packages
-      - run: npm run build --workspace=packages
+      - run: npm run build
       - run: npm publish --workspace=packages/main --access public
