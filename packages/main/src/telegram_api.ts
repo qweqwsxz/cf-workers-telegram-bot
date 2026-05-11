@@ -5,6 +5,7 @@ import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVid
 /** Interface for common Telegram API parameters */
 export interface TelegramApiBaseParams {
   chat_id: number | string;
+  message_thread_id?: number;
   business_connection_id?: string | number;
 }
 

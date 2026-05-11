@@ -8,6 +8,7 @@ import TelegramSuccessfulPayment from './TelegramSuccessfulPayment.js';
 
 interface TelegramMessage {
 	message_id: number;
+	message_thread_id?: number;
 	from: TelegramFrom;
 	sender_chat?: TelegramChat;
 	date: number;

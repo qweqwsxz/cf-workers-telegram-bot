@@ -84,6 +84,14 @@ export default class TelegramExecutionContext {
   }
 
   /**
+   * Get the message thread ID from the current update
+   * @returns The message thread ID as a number or undefined
+   */
+  private getThreadId(): number | undefined {
+    return this.update.message?.message_thread_id;
+  }
+
+  /**
    * Reply to the last message with a video
    * @param video - string to a video on the internet or a file_id on telegram
    * @param options - any additional options to pass to sendVideo
@@ -95,10 +103,11 @@ export default class TelegramExecutionContext {
       case 'guest_message':
         return await this.api.sendVideo(this.bot.api.toString(), {
           ...options,
-          chat_id: this.getChatId(),
-          reply_to_message_id: this.getMessageId(),
-          video,
-        });
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           reply_to_message_id: this.getMessageId(),
+           video,
+         });
       case 'inline':
         return await this.api.answerInline(this.bot.api.toString(), {
           ...options,
@@ -134,11 +143,12 @@ export default class TelegramExecutionContext {
       case 'guest_message':
         return await this.api.sendPhoto(this.bot.api.toString(), {
           ...options,
-          chat_id: this.getChatId(),
-          reply_to_message_id: this.getMessageId(),
-          photo,
-          caption,
-        });
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           reply_to_message_id: this.getMessageId(),
+           photo,
+           caption,
+         });
       case 'inline':
         return await this.api.answerInline(this.bot.api.toString(), {
           inline_query_id: this.update.inline_query?.id.toString() ?? '',
@@ -160,16 +170,18 @@ export default class TelegramExecutionContext {
       case 'photo':
       case 'document':
       case 'guest_message':
-        return await this.api.sendChatAction(this.bot.api.toString(), {
-          chat_id: this.getChatId(),
-          action: 'typing',
-        });
+         return await this.api.sendChatAction(this.bot.api.toString(), {
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           action: 'typing',
+         });
       case 'business_message':
         return await this.api.sendChatAction(this.bot.api.toString(), {
-          business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
-          chat_id: this.getChatId(),
-          action: 'typing',
-        });
+           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           action: 'typing',
+         });
       default:
         return null;
     }
@@ -216,11 +228,12 @@ export default class TelegramExecutionContext {
   async streamReply(message: string, draft_id: number, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
     return await this.api.sendMessageDraft(this.bot.api.toString(), {
       ...options,
-      chat_id: this.getChatId(),
-      text: message,
-      parse_mode,
-      draft_id,
-    });
+       chat_id: this.getChatId(),
+       message_thread_id: this.getThreadId(),
+       text: message,
+       parse_mode,
+       draft_id,
+     });
   }
 
   /**
@@ -242,33 +255,37 @@ export default class TelegramExecutionContext {
         if (reply) {
           return await this.api.sendMessage(this.bot.api.toString(), {
             ...options,
-            chat_id: this.getChatId(),
-            reply_to_message_id: this.getMessageId(),
-            text: message,
-            parse_mode,
-          });
+             chat_id: this.getChatId(),
+             message_thread_id: this.getThreadId(),
+             reply_to_message_id: this.getMessageId(),
+             text: message,
+             parse_mode,
+           });
         }
-        return await this.api.sendMessage(this.bot.api.toString(), {
-          ...options,
-          chat_id: this.getChatId(),
-          text: message,
-          parse_mode,
-        });
+         return await this.api.sendMessage(this.bot.api.toString(), {
+           ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           text: message,
+           parse_mode,
+         });
       case 'business_message':
-        return await this.api.sendMessage(this.bot.api.toString(), {
-          chat_id: this.getChatId(),
-          text: message,
-          business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
-          parse_mode,
-        });
+         return await this.api.sendMessage(this.bot.api.toString(), {
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           text: message,
+           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           parse_mode,
+         });
       case 'callback':
         if (this.update.callback_query?.message.chat.id) {
           return await this.api.sendMessage(this.bot.api.toString(), {
             ...options,
-            chat_id: this.update.callback_query.message.chat.id.toString(),
-            text: message,
-            parse_mode,
-          });
+             chat_id: this.update.callback_query.message.chat.id.toString(),
+             message_thread_id: this.getThreadId(),
+             text: message,
+             parse_mode,
+           });
         }
         return null;
       case 'inline':
@@ -288,14 +305,15 @@ export default class TelegramExecutionContext {
    */
   async sendStarsInvoice(title: string, description: string, payload: string, amount: number) {
     return await this.api.sendInvoice(this.bot.api.toString(), {
-      chat_id: this.getChatId(),
-      title,
-      description,
-      payload,
-      provider_token: '',
-      currency: 'XTR',
-      prices: [{ label: title, amount }],
-    });
+       chat_id: this.getChatId(),
+       message_thread_id: this.getThreadId(),
+       title,
+       description,
+       payload,
+       provider_token: '',
+       currency: 'XTR',
+       prices: [{ label: title, amount }],
+     });
   }
 
   /**
