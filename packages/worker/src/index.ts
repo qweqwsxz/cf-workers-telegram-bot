@@ -326,7 +326,9 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId!, task.prompt, response);
+					if (task.userId) {
+						await historyManager.addMessage(task.userId, task.prompt, response);
+					}
 				}
 				break;
 			}
@@ -345,7 +347,9 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.LLAMA, messages, 50000, image);
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId!, task.prompt, response);
+					if (task.userId) {
+						await historyManager.addMessage(task.userId, task.prompt, response);
+					}
 				}
 				break;
 			}
@@ -355,13 +359,17 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					...(task.history ?? []),
 					{ role: 'user', content: task.prompt },
 				];
-				const fileResponse = await bot.getFile(task.fileId!);
-				const blob = await fileResponse.arrayBuffer();
-				const image = [...new Uint8Array(blob)];
-				const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000, image);
-				if (response) {
-					await bot.reply(await markdownToHtml(response), 'HTML');
-					await historyManager.addMessage(task.userId!, task.prompt, response);
+				if (task.fileId) {
+					const fileResponse = await bot.getFile(task.fileId);
+					const blob = await fileResponse.arrayBuffer();
+					const image = [...new Uint8Array(blob)];
+					const response = await streamAiResponseGemma(bot, env, task.modelId ?? AI_MODELS.GEMMA, messages, 50000, image);
+					if (response) {
+						await bot.reply(await markdownToHtml(response), 'HTML');
+						if (task.userId) {
+							await historyManager.addMessage(task.userId, task.prompt, response);
+						}
+					}
 				}
 				break;
 			}

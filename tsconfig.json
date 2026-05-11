@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@codebam/cf-workers-telegram-bot": ["packages/main/src/main.ts"]
+    },
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "lib": ["ESNext", "WebWorker"],
+    "skipLibCheck": true,
+    "strict": true
+  }
+}
