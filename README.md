@@ -6,8 +6,7 @@ CF Workers Telegram Bot
 </h3>
 
 <h6 align="center">
-  <a href="https://codebam.github.io/cf-workers-telegram-bot/">Docs</a>
-  <a href="https://github.com/codebam/cf-workers-telegram-bot/wiki">Wiki</a>
+  <a href="https://cf-workers-telegram-bot.codebam.ca">Docs</a>
 </h6>
 
 <p align="center">
