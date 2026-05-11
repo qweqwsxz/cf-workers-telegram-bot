@@ -1,14 +1,21 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@codebam/cf-workers-telegram-bot": ["packages/main/src/main.ts"]
-    },
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "target": "ESNext",
-    "lib": ["ESNext", "WebWorker"],
-    "skipLibCheck": true,
-    "strict": true
-  }
+	"include": ["src/**/*"],
+	"compilerOptions": {
+		"strict": true,
+		"noImplicitAny": false,
+		"target": "esnext",
+		"module": "esnext",
+		"lib": ["esnext"],
+		"types": ["@cloudflare/workers-types"],
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "bundler",
+		"rootDir": "src",
+		"resolveJsonModule": true,
+		"allowJs": true,
+		"forceConsistentCasingInFileNames": true,
+		"declaration": true,
+		"skipLibCheck": true,
+		"outDir": "dist"
+	}
 }

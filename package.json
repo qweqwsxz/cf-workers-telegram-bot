@@ -1,33 +1,63 @@
 {
-	"name": "root",
-	"private": true,
-	"author": "codebam",
-	"license": "Apache-2.0",
+	"name": "@codebam/cf-workers-telegram-bot",
+	"version": "10.0.0",
+	"description": "serverless telegram bot on cf workers",
+	"main": "./dist/main.js",
+	"module": "./dist/main.js",
+	"types": "./dist/types.d.ts",
+	"files": [
+		"dist",
+		"LICENSE",
+		"README.md"
+	],
+	"keywords": [
+		"cloudflare",
+		"telegram",
+		"worker",
+		"webhook"
+	],
+	"type": "module",
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
-		"build": "npm run sync:readme && npm run build --workspaces",
-		"build:worker": "npm run build --workspace=packages/worker",
-		"test": "npm run test --workspaces",
-		"test:worker": "npm run test --workspace=packages/worker",
-		"test:main": "npm run test --workspace=packages/main",
-		"lint": "npm run lint --workspaces",
+		"build": "tsc --project tsconfig.json",
+		"lint": "eslint src",
+		"test": "vitest --config vitest.config.js",
 		"docs": "typedoc --options typedoc.json",
 		"deploy:docs": "npm run docs && wrangler pages deploy docs",
-		"sync:readme": "cp README.md packages/main/README.md",
-		"ncu": "npx npm-check-updates -i --workspaces --root -u"
+		"ncu": "npx npm-check-updates -i --root -u"
 	},
-	"workspaces": [
-		"packages/main",
-		"packages/worker"
-	],
+	"author": "codebam",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/codebam/cf-workers-telegram-bot.git"
+	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260510.1",
+		"@eslint/js": "^10.0.1",
 		"@typescript-eslint/eslint-plugin": "^8.59.2",
+		"@typescript-eslint/parser": "^8.59.2",
+		"eslint": "^10.3.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.6.0",
 		"npm-check-updates": "^22.1.1",
+		"prettier": "^3.8.3",
 		"typedoc": "^0.28.19",
-		"typedoc-plugin-extras": "^4.0.1"
-	},
-	"version": "",
-	"dependencies": {
-		"@eslint/eslintrc": "^3.3.5",
+		"typedoc-plugin-extras": "^4.0.1",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.59.2",
+		"vitest": "^4.1.5",
 		"wrangler": "^4.90.0"
+	},
+	"dependencies": {
+		"@eslint/eslintrc": "^3.3.5"
+	},
+	"typedocOptions": {
+		"entryPoints": [
+			"./src/main.ts"
+		]
 	}
 }
