@@ -169,7 +169,6 @@ export default class TelegramExecutionContext {
       case 'message':
       case 'photo':
       case 'document':
-      case 'guest_message':
          return await this.api.sendChatAction(this.bot.api.toString(), {
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
