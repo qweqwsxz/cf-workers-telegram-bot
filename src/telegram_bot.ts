@@ -144,7 +144,7 @@ export default class TelegramBot {
     const url = new URL(request.url);
 
     // Check if the request is for this bot
-    if (`/${this.token}` !== url.pathname) {
+    if (!url.pathname.startsWith(`/${this.token}`)) {
       return new Response('Invalid token', { status: 404 });
     }
 
@@ -178,7 +178,7 @@ export default class TelegramBot {
 
       case 'GET': {
         const command = url.searchParams.get('command');
-        if (command === 'set') {
+        if (command === 'set' || url.pathname.endsWith('/setWebhook')) {
           return this.webhook.set();
         }
         return new Response('Invalid command', { status: 400 });
