@@ -124,6 +124,7 @@ interface Task {
 	type: 'code' | 'message' | 'business_message' | 'photo' | 'gen_photo';
 	prompt: string;
 	userId?: number;
+	threadId?: number;
 	history?: { role: string; content: string }[];
 	modelId?: string;
 	fileId?: string;
@@ -133,20 +134,24 @@ interface Task {
 class HistoryManager {
 	constructor(private kv: KVNamespace) { }
 
-	async getHistory(userId: number): Promise<{ role: string; content: string }[]> {
-		const history = await this.kv.get<{ role: string; content: string }[]>(`history:${String(userId)}`, 'json');
+	private getKey(userId: number, threadId?: number): string {
+		return threadId ? `history:${String(userId)}:${String(threadId)}` : `history:${String(userId)}`;
+	}
+
+	async getHistory(userId: number, threadId?: number): Promise<{ role: string; content: string }[]> {
+		const history = await this.kv.get<{ role: string; content: string }[]>(this.getKey(userId, threadId), 'json');
 		return history ?? [];
 	}
 
-	async addMessage(userId: number, prompt: string, response: string) {
-		const history = await this.getHistory(userId);
+	async addMessage(userId: number, prompt: string, response: string, threadId?: number) {
+		const history = await this.getHistory(userId, threadId);
 		history.push({ role: 'system', content: `[INST] ${prompt} [/INST] \n ${response}` });
 		const trimmedHistory = history.slice(-10);
-		await this.kv.put(`history:${String(userId)}`, JSON.stringify(trimmedHistory), { expirationTtl: 86400 });
+		await this.kv.put(this.getKey(userId, threadId), JSON.stringify(trimmedHistory), { expirationTtl: 86400 });
 	}
 
-	async clearHistory(userId: number) {
-		await this.kv.delete(`history:${String(userId)}`);
+	async clearHistory(userId: number, threadId?: number) {
+		await this.kv.delete(this.getKey(userId, threadId));
 	}
 }
 
@@ -327,7 +332,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					if (task.userId) {
-						await historyManager.addMessage(task.userId, task.prompt, response);
+						await historyManager.addMessage(task.userId, task.prompt, response, task.threadId);
 					}
 				}
 				break;
@@ -348,7 +353,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 				if (response) {
 					await bot.reply(await markdownToHtml(response), 'HTML');
 					if (task.userId) {
-						await historyManager.addMessage(task.userId, task.prompt, response);
+						await historyManager.addMessage(task.userId, task.prompt, response, task.threadId);
 					}
 				}
 				break;
@@ -367,7 +372,7 @@ async function processTask(bot: TelegramExecutionContext, env: Environment, task
 					if (response) {
 						await bot.reply(await markdownToHtml(response), 'HTML');
 						if (task.userId) {
-							await historyManager.addMessage(task.userId, task.prompt, response);
+							await historyManager.addMessage(task.userId, task.prompt, response, task.threadId);
 						}
 					}
 				}
@@ -432,6 +437,7 @@ async function chargeStars(bot: TelegramExecutionContext, env: Environment, task
 	if (!userId) return;
 
 	task.userId = userId;
+	task.threadId = bot.update.message?.message_thread_id ?? bot.update.guest_message?.message_thread_id;
 	const balanceKey = `balance:${String(userId)}`;
 	const balance = await getBalance(userId, env);
 
@@ -554,7 +560,7 @@ export default {
 					if (bot.update_type === 'message') {
 						const userId = bot.update.message?.from.id;
 						if (userId) {
-							await historyManager.clearHistory(userId);
+							await historyManager.clearHistory(userId, bot.update.message?.message_thread_id);
 							await bot.reply('History cleared');
 						}
 					}
@@ -573,7 +579,8 @@ export default {
 							}
 							const userId = bot.update.message?.from.id;
 							if (userId) {
-								const history = await historyManager.getHistory(userId);
+								const threadId = bot.update.message?.message_thread_id;
+								const history = await historyManager.getHistory(userId, threadId);
 								await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
 							}
 							break;
@@ -592,7 +599,8 @@ export default {
 							}
 							const userId = bot.update.message?.from.id;
 							if (userId) {
-								const history = await historyManager.getHistory(userId);
+								const threadId = bot.update.message?.message_thread_id;
+								const history = await historyManager.getHistory(userId, threadId);
 								await chargeStars(bot, env, { type: 'photo', prompt, history, fileId }, historyManager, ctx, 10);
 							}
 							break;
@@ -645,7 +653,8 @@ export default {
 							}
 							const userId = bot.update.guest_message?.from.id;
 							if (userId) {
-								const history = await historyManager.getHistory(userId);
+								const threadId = bot.update.guest_message?.message_thread_id;
+								const history = await historyManager.getHistory(userId, threadId);
 								await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
 							}
 							break;
@@ -667,7 +676,8 @@ export default {
 
 							const userId = bot.update.business_message?.from.id;
 							if (userId && userId !== 69148517) {
-								const history = await historyManager.getHistory(userId);
+								const threadId = undefined;
+								const history = await historyManager.getHistory(userId, threadId);
 								await chargeStars(bot, env, { type: 'business_message', prompt, history, fileId, systemPrompt: SYSTEM_PROMPTS.SEAN }, historyManager, ctx);
 							}
 							break;
