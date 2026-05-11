@@ -1,3 +1,3 @@
 [submodule "cwtb-consumer"]
 	path = consumer
-	url = git@github.com:codebam/cwtb-consumer.git
+	url = https://github.com/codebam/cwtb-consumer.git
