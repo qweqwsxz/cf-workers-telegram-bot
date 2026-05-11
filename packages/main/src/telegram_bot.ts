@@ -13,7 +13,9 @@ export default class TelegramBot {
   /** The telegram update object */
   update: TelegramUpdate = new TelegramUpdate({});
   /** The telegram commands record map */
-  commands: Record<string, (ctx: TelegramExecutionContext) => Promise<Response>> = {};
+  commands: Record<string, (ctx: TelegramExecutionContext) => Promise<Response | void>> = {};
+  /** Middleware functions to run before handlers */
+  middleware: ((ctx: TelegramExecutionContext) => Promise<Response | void>)[] = [];
   /** The current bot context */
   currentContext!: TelegramExecutionContext;
   /** Default command to use when no matching command is found */
@@ -41,16 +43,58 @@ export default class TelegramBot {
    * @param event - the event or command name
    * @param callback - the bot context
    */
-  on(event: string, callback: (ctx: TelegramExecutionContext) => Promise<Response>) {
+  on(event: string, callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
     this.commands[event] = callback;
     return this;
+  }
+
+  /**
+   * Register middleware to run before all handlers
+   * @param callback - the middleware function
+   */
+  use(callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
+    this.middleware.push(callback);
+    return this;
+  }
+
+  /**
+   * Register a command handler
+   * @param commandName - the command name (without /)
+   * @param callback - the handler function
+   */
+  command(commandName: string, callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
+    return this.on(commandName, callback);
+  }
+
+  /**
+   * Register a message handler
+   * @param callback - the handler function
+   */
+  onMessage(callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
+    return this.on(':message', callback);
+  }
+
+  /**
+   * Register a photo handler
+   * @param callback - the handler function
+   */
+  onPhoto(callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
+    return this.on(':photo', callback);
+  }
+
+  /**
+   * Register a callback query handler
+   * @param callback - the handler function
+   */
+  onCallback(callback: (ctx: TelegramExecutionContext) => Promise<Response | void>) {
+    return this.on(':callback', callback);
   }
 
   /**
    * Register multiple command handlers at once
    * @param handlers - object mapping command names to handler functions
    */
-  registerHandlers(handlers: Record<string, (ctx: TelegramExecutionContext) => Promise<Response>>) {
+  registerHandlers(handlers: Record<string, (ctx: TelegramExecutionContext) => Promise<Response | void>>) {
     for (const [event, callback] of Object.entries(handlers)) {
       this.on(event, callback);
     }
@@ -92,24 +136,6 @@ export default class TelegramBot {
   }
 
   /**
-   * Parse arguments from the update
-   * @param ctx - the execution context
-   * @returns array of argument strings
-   */
-  private parseArguments(ctx: TelegramExecutionContext): string[] {
-    switch (ctx.update_type) {
-      case 'message':
-      case 'business_message':
-      case 'guest_message':
-        return (this.update.message?.text ?? this.update.guest_message?.text)?.split(' ') ?? [];
-      case 'inline':
-        return this.update.inline_query?.query.split(' ') ?? [];
-      default:
-        return [];
-    }
-  }
-
-  /**
    * Handle a request on a given bot
    * @param request - the request to handle
    */
@@ -132,10 +158,18 @@ export default class TelegramBot {
           const ctx = new TelegramExecutionContext(this, this.update);
           this.currentContext = ctx;
 
-          const args = this.parseArguments(ctx);
-          const command = this.determineCommand(ctx, args);
+          // Run middleware
+          for (const middleware of this.middleware) {
+            const result = await middleware(ctx);
+            if (result instanceof Response) {
+              return result;
+            }
+          }
 
-          return await this.commands[command](ctx);
+          const command = this.determineCommand(ctx, ctx.args);
+          const response = await this.commands[command](ctx);
+
+          return response instanceof Response ? response : new Response('ok');
         } catch (error) {
           console.error('Error handling Telegram update:', error);
           return new Response('Error processing request', { status: 500 });

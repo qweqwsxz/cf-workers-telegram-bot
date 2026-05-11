@@ -15,6 +15,8 @@ export default class TelegramExecutionContext {
   update_type = '';
   /** reference to TelegramApi class */
   api = new TelegramApi();
+  /** array of arguments parsed from the message */
+  args: string[] = [];
 
   /**
    * Create a telegram execution context
@@ -26,6 +28,48 @@ export default class TelegramExecutionContext {
     this.update = update;
 
     this.update_type = this.determineUpdateType();
+    this.args = this.parseArguments();
+  }
+
+  /**
+   * Get the message text from the current update
+   * @returns The message text as a string or empty string if not available
+   */
+  get text(): string {
+    return (this.update.message?.text ?? this.update.business_message?.text ?? this.update.guest_message?.text)?.toString() ?? '';
+  }
+
+  /**
+   * Get the chat ID as a string
+   * @returns The chat ID
+   */
+  get chatId(): string {
+    return this.getChatId();
+  }
+
+  /**
+   * Get the user ID from the current update
+   * @returns The user ID or undefined if not available
+   */
+  get userId(): number | undefined {
+    return this.update.message?.from.id ?? this.update.business_message?.from.id ?? this.update.guest_message?.from.id;
+  }
+
+  /**
+   * Parse arguments from the update
+   * @returns array of argument strings
+   */
+  private parseArguments(): string[] {
+    switch (this.update_type) {
+      case 'message':
+      case 'business_message':
+      case 'guest_message':
+        return (this.update.message?.text ?? this.update.guest_message?.text)?.split(' ') ?? [];
+      case 'inline':
+        return this.update.inline_query?.query.split(' ') ?? [];
+      default:
+        return [];
+    }
   }
 
   /**

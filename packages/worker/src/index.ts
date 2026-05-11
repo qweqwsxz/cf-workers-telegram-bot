@@ -505,71 +505,51 @@ export default {
 					const id = crypto.randomUUID().slice(0, 5);
 					await env.R2.put(id, await fileResponse.arrayBuffer());
 					await bot.reply(`https://r2.seanbehan.ca/${id}`);
-					return new Response('ok');
 				})
-				.on('epoch', async (bot: TelegramExecutionContext) => {
-					if (bot.update_type === 'message') {
-						await bot.reply(Math.floor(Date.now() / 1000).toString());
-					}
-					return new Response('ok');
+				.command('epoch', async (bot: TelegramExecutionContext) => {
+					await bot.reply(Math.floor(Date.now() / 1000).toString());
 				})
-				.on('start', async (bot: TelegramExecutionContext) => {
-					if (bot.update_type === 'message') {
-						await bot.reply(
-							'Welcome! Here are my commands:\n' +
-							'/balance - Check your current Star balance\n' +
-							'/load <amount> - Top up your balance with Telegram Stars\n' +
-							'/photo <prompt> - Generate an image (100 Stars)\n' +
-							'/model <name> - Switch AI model and see costs\n' +
-							'/code <prompt> - Generate code snippets\n' +
-							'<prompt> - Generate text\n' +
-							'/clear - Clear your conversation history\n\n' +
-							'New users start with 200 free credits!',
-						);
-					}
-					return new Response('ok');
+				.command('start', async (bot: TelegramExecutionContext) => {
+					await bot.reply(
+						'Welcome! Here are my commands:\n' +
+						'/balance - Check your current Star balance\n' +
+						'/load <amount> - Top up your balance with Telegram Stars\n' +
+						'/photo <prompt> - Generate an image (100 Stars)\n' +
+						'/model <name> - Switch AI model and see costs\n' +
+						'/code <prompt> - Generate code snippets\n' +
+						'<prompt> - Generate text\n' +
+						'/clear - Clear your conversation history\n\n' +
+						'New users start with 200 free credits!',
+					);
 				})
-				.on('code', async (bot: TelegramExecutionContext) => {
-					if (bot.update_type === 'message') {
-						const prompt = bot.update.message?.text?.toString().split(' ').slice(1).join(' ') ?? '';
-						await chargeStars(bot, env, { type: 'code', prompt }, historyManager, ctx);
-					}
-					return new Response('ok');
+				.command('code', async (bot: TelegramExecutionContext) => {
+					const prompt = bot.args.slice(1).join(' ');
+					await chargeStars(bot, env, { type: 'code', prompt }, historyManager, ctx);
 				})
-				.on('balance', async (bot: TelegramExecutionContext) => {
-					const userId = bot.update.message?.from.id ?? bot.update.business_message?.from.id ?? bot.update.guest_message?.from.id;
-					if (userId) {
-						const balance = await getBalance(userId, env);
+				.command('balance', async (bot: TelegramExecutionContext) => {
+					if (bot.userId) {
+						const balance = await getBalance(bot.userId, env);
 						await bot.reply(`Your current balance is ${String(balance)} Stars.`);
 					}
-					return new Response('ok');
 				})
-				.on('load', async (bot: TelegramExecutionContext) => {
-					if (bot.update_type === 'message') {
-						const amountStr = bot.update.message?.text?.toString().split(' ')[1];
-						const amount = parseInt(amountStr ?? '0');
-						if (isNaN(amount) || amount <= 0 || amount > 1000) {
-							await bot.reply('Please specify an amount between 1 and 1000 Stars. Example: /load 100');
-						} else {
-							await bot.sendStarsInvoice('Stars Top-up', `Purchase ${String(amount)} Stars`, `load:${String(amount)}`, amount);
-						}
+				.command('load', async (bot: TelegramExecutionContext) => {
+					const amount = parseInt(bot.args[1] ?? '0');
+					if (isNaN(amount) || amount <= 0 || amount > 1000) {
+						await bot.reply('Please specify an amount between 1 and 1000 Stars. Example: /load 100');
+					} else {
+						await bot.sendStarsInvoice('Stars Top-up', `Purchase ${String(amount)} Stars`, `load:${String(amount)}`, amount);
 					}
-					return new Response('ok');
 				})
-				.on('clear', async (bot: TelegramExecutionContext) => {
-					if (bot.update_type === 'message') {
-						const userId = bot.update.message?.from.id;
-						if (userId) {
-							await historyManager.clearHistory(userId, bot.update.message?.message_thread_id);
-							await bot.reply('History cleared');
-						}
+				.command('clear', async (bot: TelegramExecutionContext) => {
+					if (bot.userId) {
+						await historyManager.clearHistory(bot.userId, bot.update.message?.message_thread_id);
+						await bot.reply('History cleared');
 					}
-					return new Response('ok');
 				})
-				.on(':message', async (bot: TelegramExecutionContext) => {
+				.onMessage(async (bot: TelegramExecutionContext) => {
 					switch (bot.update_type) {
 						case 'message': {
-							let prompt = bot.update.message?.text?.toString() ?? '';
+							let prompt = bot.text;
 							if (bot.update.message?.reply_to_message) {
 								const reply = bot.update.message.reply_to_message;
 								const replyText = reply.text ?? reply.caption ?? '';
@@ -577,10 +557,8 @@ export default {
 									prompt = `Context of the message I am replying to: "${replyText}"\n\nMy message: ${prompt}`;
 								}
 							}
-							const userId = bot.update.message?.from.id;
-							if (userId) {
-								const threadId = bot.update.message?.message_thread_id;
-								const history = await historyManager.getHistory(userId, threadId);
+							if (bot.userId) {
+								const history = await historyManager.getHistory(bot.userId, bot.update.message?.message_thread_id);
 								await chargeStars(bot, env, { type: 'message', prompt, history }, historyManager, ctx);
 							}
 							break;
