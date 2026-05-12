@@ -16,5 +16,6 @@ interface PartialTelegramUpdate {
 	guest_message?: TelegramGuestMessage;
 	pre_checkout_query?: TelegramPreCheckoutQuery;
 	callback_query?: TelegramCallbackQuery;
+	business_connection?: any;
 }
 export default PartialTelegramUpdate;

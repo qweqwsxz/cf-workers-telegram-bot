@@ -95,6 +95,8 @@ export default class TelegramExecutionContext {
       return 'pre_checkout_query';
     } else if (this.update.message?.successful_payment) {
       return 'successful_payment';
+    } else if (this.update.business_connection) {
+      return 'business_connection';
     }
     return '';
   }

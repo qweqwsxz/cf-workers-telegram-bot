@@ -25,6 +25,7 @@ export default class TelegramUpdate {
 	// my_chat_member?: TelegramChatMemberUpdated;
 	// chat_member?: TelegramChatMemberUpdated;
 	// chat_join_request: TelegramChatJoinRequest;
+	business_connection?: any;
 	constructor(update: PartialTelegramUpdate) {
 		this.update_id = update.update_id ?? 0;
 		this.message = update.message;
@@ -38,6 +39,7 @@ export default class TelegramUpdate {
 		this.callback_query = update.callback_query;
 		// shipping_query = update.shipping_query;
 		this.pre_checkout_query = update.pre_checkout_query;
+		this.business_connection = update.business_connection;
 		// poll = update.poll;
 		// poll_answer = update.poll_answer;
 		// my_chat_member = update.my_chat_member;
