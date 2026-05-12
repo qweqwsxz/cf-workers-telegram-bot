@@ -6,6 +6,8 @@ import TelegramPhotoSize from './TelegramPhotoSize.js';
 import TelegramUser from './TelegramUser.js';
 import TelegramSuccessfulPayment from './TelegramSuccessfulPayment.js';
 
+import { TelegramVoice } from './TelegramVoice.js';
+
 interface TelegramMessage {
 	message_id: number;
 	message_thread_id?: number;
@@ -35,7 +37,7 @@ interface TelegramMessage {
 	// sticker?: TelegramSticker;
 	// video?: TelegramVideo;
 	// video_note?: TelegramVideoNote;
-	// voice?: TelegramVoice;
+	voice?: TelegramVoice;
 	caption?: string;
 	caption_entities?: TelegramMessageEntity[];
 	// contact?: TelegramContact;

@@ -118,6 +118,8 @@ export default class TelegramBot {
     switch (ctx.update_type) {
       case 'photo':
         return ':photo' in this.commands ? ':photo' : this.defaultCommand;
+      case 'voice':
+        return ':voice' in this.commands ? ':voice' : this.defaultCommand;
       case 'document':
         return ':document' in this.commands ? ':document' : this.defaultCommand;
       case 'callback':

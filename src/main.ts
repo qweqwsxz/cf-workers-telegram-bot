@@ -7,6 +7,7 @@ import TelegramApi, {
 	SendMessageDraftParams,
 	SendPhotoParams,
 	SendVideoParams,
+	SendVoiceParams,
 	SendChatActionParams,
 	AnswerCallbackParams,
 	AnswerInlineParams,
@@ -22,6 +23,7 @@ import TelegramUser from './types/TelegramUser.js';
 import TelegramMessageEntity from './types/TelegramMessageEntity.js';
 import TelegramPhotoSize from './types/TelegramPhotoSize.js';
 import TelegramMessage from './types/TelegramMessage.js';
+import { TelegramVoice } from './types/TelegramVoice.js';
 import TelegramGuestMessage from './types/TelegramGuestMessage.js';
 import TelegramInputMessageContent from './types/TelegramInputMessageContent.js';
 import TelegramInlineQuery from './types/TelegramInlineQuery.js';
@@ -50,6 +52,7 @@ export {
 	SendMessageDraftParams,
 	SendPhotoParams,
 	SendVideoParams,
+	SendVoiceParams,
 	SendChatActionParams,
 	AnswerCallbackParams,
 	AnswerInlineParams,
@@ -64,6 +67,7 @@ export {
 	TelegramMessageEntity,
 	TelegramPhotoSize,
 	TelegramMessage,
+	TelegramVoice,
 	TelegramGuestMessage,
 	TelegramInputMessageContent,
 	TelegramInlineQuery,

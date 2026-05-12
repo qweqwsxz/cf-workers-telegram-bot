@@ -79,6 +79,8 @@ export default class TelegramExecutionContext {
   private determineUpdateType(): string {
     if (this.update.message?.photo) {
       return 'photo';
+    } else if (this.update.message?.voice) {
+      return 'voice';
     } else if (this.update.message?.text) {
       return 'message';
     } else if (this.update.inline_query?.query) {
@@ -201,6 +203,31 @@ export default class TelegramExecutionContext {
           results: [new TelegramInlineQueryResultPhoto(photo)],
         });
 
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Reply to the last message with a voice message
+   * @param voice - url or file_id to voice
+   * @param caption - voice caption
+   * @param options - any additional options to pass to sendVoice
+   * @returns Promise with the API response
+   */
+  async replyVoice(voice: string, caption = '', options: Record<string, number | string | boolean> = {}) {
+    switch (this.update_type) {
+      case 'voice':
+      case 'message':
+      case 'guest_message':
+        return await this.api.sendVoice(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           reply_to_message_id: this.getMessageId(),
+           voice,
+           caption,
+         });
       default:
         return null;
     }

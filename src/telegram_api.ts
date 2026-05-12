@@ -93,11 +93,24 @@ export interface AnswerPreCheckoutParams {
   error_message?: string;
 }
 
+/** Interface for voice parameters */
+export interface SendVoiceParams extends TelegramApiBaseParams {
+  voice: string;
+  caption?: string;
+  parse_mode?: string;
+  duration?: number;
+  reply_to_message_id?: number | string;
+  disable_notification?: boolean;
+  protect_content?: boolean;
+  reply_markup?: object;
+}
+
 /** Type for all possible API parameters */
 export type TelegramApiParams =
   | SendMessageParams
   | SendPhotoParams
   | SendVideoParams
+  | SendVoiceParams
   | SendChatActionParams
   | AnswerCallbackParams
   | AnswerInlineParams
@@ -224,6 +237,17 @@ export default class TelegramApi {
   async sendPhoto(botApi: string, data: SendPhotoParams): Promise<Response> {
     const url = this.getApiUrl(botApi, 'sendPhoto', data);
     return await this.fetchAndLog(url, 'sendPhoto', data);
+  }
+
+  /**
+   * Send a voice message to a given botApi
+   * @param botApi - full URL to the telegram API without slug
+   * @param data - data to append to the request
+   * @returns Promise with the API response
+   */
+  async sendVoice(botApi: string, data: SendVoiceParams): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'sendVoice', data);
+    return await this.fetchAndLog(url, 'sendVoice', data);
   }
 
   /**
