@@ -20,18 +20,24 @@ export default class TelegramBot {
   currentContext!: TelegramExecutionContext;
   /** Default command to use when no matching command is found */
   defaultCommand = ':message';
+  /** Optional secret token for webhook verification */
+  secretToken?: string;
 
   /**
    *	Create a bot
    *	@param token - the telegram secret token
    *	@param options - optional configuration for the bot
    */
-  constructor(token: string, options?: { defaultCommand?: string }) {
+  constructor(token: string, options?: { defaultCommand?: string; secretToken?: string }) {
     this.token = token.trim();
     this.api = new URL('https://api.telegram.org/bot' + this.token);
 
     if (options?.defaultCommand) {
       this.defaultCommand = options.defaultCommand;
+    }
+
+    if (options?.secretToken) {
+      this.secretToken = options.secretToken;
     }
 
     // Register default handler for the default command to avoid errors
@@ -140,7 +146,7 @@ export default class TelegramBot {
    * @param request - the request to handle
    */
   async handle(request: Request): Promise<Response> {
-    this.webhook = new Webhook(this.token, request);
+    this.webhook = new Webhook(this.token, request, this.secretToken);
     const url = new URL(request.url);
 
     // Check if the request is for this bot
@@ -152,6 +158,11 @@ export default class TelegramBot {
     switch (request.method) {
       case 'POST': {
         try {
+          // Verify secret token if configured
+          if (this.secretToken && request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== this.secretToken) {
+            return new Response('Unauthorized', { status: 403 });
+          }
+
           this.update = await request.json();
           console.log(this.update);
 

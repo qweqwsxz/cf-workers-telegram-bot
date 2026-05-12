@@ -6,18 +6,20 @@ export default class Webhook {
   /** Base URL for the Telegram Bot API */
   private readonly api: URL;
 
-  /** Webhook URL that Telegram will send updates to */
-  private readonly webhook: URL;
+  /** Secret token to be sent in the X-Telegram-Bot-Api-Secret-Token header */
+  private readonly secretToken?: string;
 
   /**
    * Creates a new Webhook instance.
    *
    * @param token - The Telegram bot token
    * @param request - The incoming request object used to determine the webhook URL
+   * @param secretToken - Optional secret token for webhook verification
    */
-  constructor(token: string, request: Request) {
+  constructor(token: string, request: Request, secretToken?: string) {
     this.api = new URL(`https://api.telegram.org/bot${token}`);
     this.webhook = new URL(`${new URL(request.url).origin}/${token}`);
+    this.secretToken = secretToken;
   }
 
   /**
@@ -31,15 +33,21 @@ export default class Webhook {
     const url = new URL(`${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}setWebhook`);
 
     // Configure webhook parameters
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
       url: this.webhook.toString(),
       max_connections: '40',
       allowed_updates: JSON.stringify(['message', 'inline_query', 'guest_message', 'business_message', 'business_connection']),
       drop_pending_updates: 'true',
-    });
+    };
+
+    if (this.secretToken) {
+      params.secret_token = this.secretToken;
+    }
+
+    const searchParams = new URLSearchParams(params);
 
     try {
-      const response = await fetch(`${url.toString()}?${params.toString()}`);
+      const response = await fetch(`${url.toString()}?${searchParams.toString()}`);
       if (response.status !== 200) {
         throw new Error(`Telegram API error (setWebhook): ${String(response.status)} ${response.statusText}`);
       }
@@ -48,7 +56,7 @@ export default class Webhook {
         const json = await cloned.json();
         console.log({
           method: 'setWebhook',
-          params: Object.fromEntries(params),
+          params: params,
           response: json,
         });
       } catch (e) {
