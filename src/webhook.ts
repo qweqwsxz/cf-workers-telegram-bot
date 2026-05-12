@@ -6,6 +6,9 @@ export default class Webhook {
   /** Base URL for the Telegram Bot API */
   private readonly api: URL;
 
+  /** Webhook URL that Telegram will send updates to */
+  private readonly webhook: URL;
+
   /** Secret token to be sent in the X-Telegram-Bot-Api-Secret-Token header */
   private readonly secretToken?: string;
 
