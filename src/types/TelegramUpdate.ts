@@ -6,6 +6,7 @@ import TelegramBusinessMessage from './TelegramBusinessMessage.js';
 import TelegramGuestMessage from './TelegramGuestMessage.js';
 
 import TelegramPreCheckoutQuery from './TelegramPreCheckoutQuery.js';
+import TelegramBusinessConnection from './TelegramBusinessConnection.js';
 
 export default class TelegramUpdate {
 	update_id: number;
@@ -25,7 +26,7 @@ export default class TelegramUpdate {
 	// my_chat_member?: TelegramChatMemberUpdated;
 	// chat_member?: TelegramChatMemberUpdated;
 	// chat_join_request: TelegramChatJoinRequest;
-	business_connection?: any;
+	business_connection?: TelegramBusinessConnection;
 	constructor(update: PartialTelegramUpdate) {
 		this.update_id = update.update_id ?? 0;
 		this.message = update.message;

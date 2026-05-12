@@ -4,6 +4,7 @@ import TelegramMessage from './TelegramMessage.js';
 import TelegramGuestMessage from './TelegramGuestMessage.js';
 import TelegramPreCheckoutQuery from './TelegramPreCheckoutQuery.js';
 import TelegramCallbackQuery from './TelegramCallbackQuery.js';
+import TelegramBusinessConnection from './TelegramBusinessConnection.js';
 
 interface PartialTelegramUpdate {
 	update_id?: number;
@@ -16,6 +17,6 @@ interface PartialTelegramUpdate {
 	guest_message?: TelegramGuestMessage;
 	pre_checkout_query?: TelegramPreCheckoutQuery;
 	callback_query?: TelegramCallbackQuery;
-	business_connection?: any;
+	business_connection?: TelegramBusinessConnection;
 }
 export default PartialTelegramUpdate;
