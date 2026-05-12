@@ -147,6 +147,7 @@ export default class TelegramExecutionContext {
    */
   async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
     switch (this.update_type) {
+      case 'voice':
       case 'message':
       case 'guest_message':
         return await this.api.sendVideo(this.bot.api.toString(), {
@@ -186,6 +187,7 @@ export default class TelegramExecutionContext {
    */
   async replyPhoto(photo: string, caption = '', options: Record<string, number | string | boolean> = {}) {
     switch (this.update_type) {
+      case 'voice':
       case 'photo':
       case 'message':
       case 'guest_message':
@@ -239,6 +241,7 @@ export default class TelegramExecutionContext {
    */
   async sendTyping() {
     switch (this.update_type) {
+      case 'voice':
       case 'message':
       case 'photo':
       case 'document':
@@ -317,6 +320,7 @@ export default class TelegramExecutionContext {
    */
   async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
     switch (this.update_type) {
+      case 'voice':
       case 'message':
       case 'photo':
       case 'document':
