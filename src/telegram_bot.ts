@@ -127,17 +127,27 @@ export default class TelegramBot {
       case 'inline':
         return ':inline' in this.commands ? ':inline' : this.defaultCommand;
       case 'guest_message':
-        return ':guest_message' in this.commands ? ':guest_message' : this.defaultCommand;
+        // For guest messages, we fall through to command detection if it's not a special type
+        break;
       case 'pre_checkout_query':
         return ':pre_checkout_query' in this.commands ? ':pre_checkout_query' : this.defaultCommand;
       case 'successful_payment':
         return ':successful_payment' in this.commands ? ':successful_payment' : this.defaultCommand;
     }
 
-    // Then check if it's a command starting with /
-    if (args[0]?.startsWith('/')) {
-      const command = args[0].substring(1, args[0].lastIndexOf('@') > -1 ? args[0].lastIndexOf('@') : args[0].length);
-      return command in this.commands ? command : this.defaultCommand;
+    // Then check if there's a command starting with / anywhere in the message
+    const commandIndex = args.findIndex((arg) => arg.startsWith('/'));
+    if (commandIndex !== -1) {
+      const fullCommand = args[commandIndex];
+      const command = fullCommand.substring(
+        1,
+        fullCommand.lastIndexOf('@') > -1 ? fullCommand.lastIndexOf('@') : fullCommand.length,
+      );
+      if (command in this.commands) {
+        // Shift args so the command handler sees the command at index 0
+        ctx.args = args.slice(commandIndex);
+        return command;
+      }
     }
 
     return this.defaultCommand;
