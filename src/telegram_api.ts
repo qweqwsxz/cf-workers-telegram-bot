@@ -156,7 +156,7 @@ export default class TelegramApi {
       try {
         const json = (await cloned.json()) as { description?: string };
         errorDescription = json.description ? `: ${json.description}` : '';
-      } catch (e) {
+      } catch {
         // ignore
       }
       throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}${errorDescription}`);
