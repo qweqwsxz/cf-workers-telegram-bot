@@ -4,3 +4,6 @@
 [submodule "tux-robot"]
 	path = tux-robot
 	url = https://github.com/codebam/tux-robot.git
+[submodule "webapp"]
+	path = webapp
+	url = https://github.com/codebam/tux-robot-webapp
