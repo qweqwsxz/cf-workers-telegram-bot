@@ -151,7 +151,15 @@ export default class TelegramApi {
   private async fetchAndLog(url: Request, slug: string, data: TelegramApiParams): Promise<Response> {
     const response = await fetch(url);
     if (response.status !== 200) {
-      throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}`);
+      const cloned = response.clone();
+      let errorDescription = '';
+      try {
+        const json = (await cloned.json()) as { description?: string };
+        errorDescription = json.description ? `: ${json.description}` : '';
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}${errorDescription}`);
     }
     const cloned = response.clone();
     try {
