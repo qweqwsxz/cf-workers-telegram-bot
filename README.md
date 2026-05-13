@@ -19,39 +19,99 @@ CF Workers Telegram Bot
 
 ![screenshot of cf-workers-telegram-bot](https://raw.githubusercontent.com/codebam/cf-workers-telegram-bot/master/assets/screenshot.png)
 
+A lightweight, type-safe Telegram Bot framework for Cloudflare Workers.
+
+## Installation
+
 ```sh
-npm i @codebam/cf-workers-telegram-bot
+npm install @codebam/cf-workers-telegram-bot
 ```
 
-See [cwtb-consumer](https://github.com/codebam/cwtb-consumer) for an example of what a bot might look like. Just import from `@codebam/cf-workers-telegram-bot`.
+## Quick Start
 
-See [my blog post](https://seanbehan.ca/posts/cf-workers-telegram-bot) for a more in-depth guide for how to set up a bot.
+```typescript
+import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
 
-- `npm create cloudflare@latest`
-- `npx wrangler login`
-- `npx wrangler secret put SECRET_TELEGRAM_API_TOKEN`, set it to your telegram bot token that you got from `@BotFather`
-- `npx wrangler deploy`
-- Open this url in your browser to set your webhook `https://your-worker.username.workers.dev/SECRET_TELEGRAM_API_TOKEN?command=set`
+export interface Env {
+  SECRET_TELEGRAM_API_TOKEN: string;
+}
 
-To set up GitHub actions to deploy when you push, see https://github.com/cloudflare/wrangler-action
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 
----
+    await bot
+      .command('start', async (ctx) => {
+        await ctx.reply('Hello! I am running on Cloudflare Workers.');
+      })
+      .onMessage(async (ctx) => {
+        await ctx.reply(`You said: ${ctx.text}`);
+      })
+      .handle(request);
 
-These instructions are for if you want to deploy a copy of the bot along with
-the library. Such as if you need extra API requests that haven't been
-implemented yet.
+    return new Response('ok');
+  },
+};
+```
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/codebam/cf-workers-telegram-bot)
+## Features
 
-- Click the deploy button
-- Navigate to your new **GitHub repository &gt; Settings &gt; Secrets** and add the following secrets:
+- **Type-safe**: Built with TypeScript for a better developer experience.
+- **Middleware support**: Run logic before your handlers.
+- **Built-in Webhook Management**: Easily set your webhook with a simple URL.
+- **Lightweight**: Zero dependencies (other than type definitions).
 
-  ```yaml
-  - Name: CLOUDFLARE_API_TOKEN  (should be added automatically)
-  - Name: CLOUDFLARE_ACCOUNT_ID (should be added automatically)
+## Using the Consumer Template
 
-  - Name: SECRET_TELEGRAM_API_TOKEN
-  - Value: your-telegram-bot-token
-  ```
+The `consumer` directory in this repository serves as a template for new projects. It is included as a git submodule.
 
-- Push to `master` to trigger a deploy
+1. **Clone the repository with submodules**:
+   ```sh
+   git clone --recursive https://github.com/codebam/cf-workers-telegram-bot.git
+   ```
+   *Or, if you've already cloned it:*
+   ```sh
+   git submodule update --init --recursive
+   ```
+
+2. **Copy the consumer directory**:
+   ```sh
+   cp -r consumer my-new-bot
+   cd my-new-bot
+   npm install
+   ```
+
+3. **Configure your bot**:
+   Update `wrangler.toml` with your worker name.
+
+4. **Set your Telegram Token**:
+   Get a token from [@BotFather](https://t.me/BotFather) and add it to your worker:
+   ```sh
+   npx wrangler secret put SECRET_TELEGRAM_API_TOKEN
+   ```
+
+5. **Deploy**:
+   ```sh
+   npm run deploy
+   ```
+
+6. **Set Webhook**:
+   Visit the following URL in your browser to register your worker with Telegram:
+   `https://<your-worker>.<your-subdomain>.workers.dev/<SECRET_TELEGRAM_API_TOKEN>?command=set`
+
+## Deployment
+
+### Manual Deployment
+Use [Wrangler](https://developers.cloudflare.com/workers/wrangler/) to deploy:
+```sh
+npx wrangler deploy
+```
+
+### GitHub Actions
+To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action). Add `CLOUDFLARE_API_TOKEN` and `SECRET_TELEGRAM_API_TOKEN` to your repository secrets.
+
+## API Documentation
+Detailed API documentation is available at [cf-workers-telegram-bot.codebam.ca](https://cf-workers-telegram-bot.codebam.ca).
+
+## License
+Apache-2.0
