@@ -95,9 +95,9 @@ The `consumer` directory in this repository serves as a template for new project
    npm run deploy
    ```
 
-6. **Set Webhook**:
+5. **Set Webhook**:
    Visit the following URL in your browser to register your worker with Telegram:
-   `https://<your-worker>.<your-subdomain>.workers.dev/<SECRET_TELEGRAM_API_TOKEN>?command=set`
+   `https://<your-worker>.<your-subdomain>.workers.dev/<SECRET_TELEGRAM_API_TOKEN>/setWebhook`
 
 ## Deployment
 
@@ -108,7 +108,8 @@ npx wrangler deploy
 ```
 
 ### GitHub Actions
-To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action). Add `CLOUDFLARE_API_TOKEN` and `SECRET_TELEGRAM_API_TOKEN` to your repository secrets.
+To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action) or Cloudflare's built-in [GitHub integration](https://developers.cloudflare.com/workers/ci-cd/github-actions/).
+
 
 ## API Documentation
 Detailed API documentation is available at [cf-workers-telegram-bot.codebam.ca](https://cf-workers-telegram-bot.codebam.ca).
