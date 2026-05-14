@@ -66,7 +66,7 @@ export default class TelegramExecutionContext {
       case 'message':
       case 'business_message':
       case 'guest_message':
-        return (this.update.message?.text ?? this.update.guest_message?.text)?.split(' ') ?? [];
+        return (this.update.message?.text ?? this.update.business_message?.text ?? this.update.guest_message?.text)?.toString().split(' ') ?? [];
       case 'inline':
         return this.update.inline_query?.query.split(' ') ?? [];
       default:
