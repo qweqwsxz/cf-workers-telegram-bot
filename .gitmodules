@@ -1,9 +1,6 @@
 [submodule "cwtb-consumer"]
 	path = consumer
 	url = https://github.com/codebam/cwtb-consumer.git
-[submodule "tux-robot"]
-	path = tux-robot
-	url = https://github.com/codebam/tux-robot.git
 [submodule "webapp"]
 	path = webapp
 	url = https://github.com/codebam/tux-robot-webapp
