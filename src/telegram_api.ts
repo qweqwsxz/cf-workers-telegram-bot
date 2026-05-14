@@ -323,6 +323,7 @@ export default class TelegramApi {
       parse_mode?: string;
       disable_web_page_preview?: boolean;
       reply_markup?: object;
+      business_connection_id?: string | number;
     },
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'editMessageText', data);

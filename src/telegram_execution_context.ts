@@ -158,6 +158,14 @@ export default class TelegramExecutionContext {
            reply_to_message_id: this.getMessageId(),
            video,
          });
+      case 'business_message':
+        return await this.api.sendVideo(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           video,
+         });
       case 'guest_message':
         return await this.answerGuestQueryVideo(video);
       case 'inline':
@@ -201,6 +209,15 @@ export default class TelegramExecutionContext {
            photo,
            caption,
          });
+      case 'business_message':
+        return await this.api.sendPhoto(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           photo,
+           caption,
+         });
       case 'guest_message':
         return await this.answerGuestQueryPhoto(photo, caption);
       case 'inline':
@@ -230,6 +247,15 @@ export default class TelegramExecutionContext {
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
            reply_to_message_id: this.getMessageId(),
+           voice,
+           caption,
+         });
+      case 'business_message':
+        return await this.api.sendVoice(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
            voice,
            caption,
          });
@@ -358,12 +384,15 @@ export default class TelegramExecutionContext {
     options: Record<string, number | string | boolean | object> = {},
   ) {
     const message_id = this.drafts.get(draft_id);
+    const business_connection_id = this.update.business_message?.business_connection_id.toString();
+
     if (message_id) {
       return await this.api.editMessageText(this.bot.api.toString(), {
         chat_id: this.getChatId(),
         message_id,
         text: message,
         parse_mode,
+        business_connection_id,
         ...options,
       });
     }
@@ -382,6 +411,7 @@ export default class TelegramExecutionContext {
       message_thread_id: this.getThreadId(),
       text: message,
       parse_mode,
+      business_connection_id,
     });
 
     if (response.status === 200) {
@@ -469,6 +499,7 @@ export default class TelegramExecutionContext {
     return await this.api.sendInvoice(this.bot.api.toString(), {
        chat_id: this.getChatId(),
        message_thread_id: this.getThreadId(),
+       business_connection_id: this.update.business_message?.business_connection_id.toString(),
        title,
        description,
        payload,
