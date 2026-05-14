@@ -293,22 +293,55 @@ export default class TelegramExecutionContext {
   }
 
 
+  /** Map of draft IDs to message IDs for streaming */
+  private drafts = new Map<number, number>();
+
   /**
    * Reply to the last message with a stream of text
    * @param message - text to reply with
+   * @param draft_id - unique ID for this stream
    * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
-   * @param options - any additional options to pass to sendMessage
+   * @param options - any additional options to pass to sendMessage/editMessageText
    * @returns Promise with the API response
    */
-  async streamReply(message: string, draft_id: number, parse_mode = '', options: Record<string, number | string | boolean> = {}) {
-    return await this.api.sendMessageDraft(this.bot.api.toString(), {
+  async streamReply(
+    message: string,
+    draft_id: number,
+    parse_mode = '',
+    options: Record<string, number | string | boolean | object> = {},
+  ) {
+    const message_id = this.drafts.get(draft_id);
+    if (message_id) {
+      return await this.api.editMessageText(this.bot.api.toString(), {
+        chat_id: this.getChatId(),
+        message_id,
+        text: message,
+        parse_mode,
+        ...options,
+      });
+    }
+
+    const response = await this.api.sendMessage(this.bot.api.toString(), {
       ...options,
-       chat_id: this.getChatId(),
-       message_thread_id: this.getThreadId(),
-       text: message,
-       parse_mode,
-       draft_id,
-     });
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      text: message,
+      parse_mode,
+    });
+
+    if (response.status === 200) {
+      const cloned = response.clone();
+      try {
+        const json = (await cloned.json()) as { ok: boolean; result: { message_id: number } };
+        if (json.ok && json.result?.message_id) {
+          this.drafts.set(draft_id, json.result.message_id);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return response;
   }
 
   /**
