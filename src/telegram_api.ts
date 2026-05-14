@@ -358,4 +358,14 @@ export default class TelegramApi {
     const url = this.getApiUrl(botApi, 'answerPreCheckoutQuery', data);
     return await this.fetchAndLog(url, 'answerPreCheckoutQuery', data);
   }
+
+  /**
+   * Get basic information about the bot
+   * @param botApi - full URL to the telegram API without slug
+   * @returns Promise with the API response
+   */
+  async getMe(botApi: string): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'getMe', {});
+    return await this.fetchAndLog(url, 'getMe', {});
+  }
 }
