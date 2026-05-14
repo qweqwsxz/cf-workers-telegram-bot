@@ -4,6 +4,8 @@ import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultA
 import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
 import TelegramUpdate from './types/TelegramUpdate.js';
 import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
+import TelegramInlineQueryResultVoice from './types/TelegramInlineQueryResultVoice.js';
+import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
 
 /** Class representing the context of execution */
 export default class TelegramExecutionContext {
@@ -149,7 +151,6 @@ export default class TelegramExecutionContext {
     switch (this.update_type) {
       case 'voice':
       case 'message':
-      case 'guest_message':
         return await this.api.sendVideo(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
@@ -157,11 +158,13 @@ export default class TelegramExecutionContext {
            reply_to_message_id: this.getMessageId(),
            video,
          });
+      case 'guest_message':
+        return await this.answerGuestQueryVideo(video);
       case 'inline':
         return await this.api.answerInline(this.bot.api.toString(), {
           ...options,
           inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [new TelegramInlineQueryResultVideo(video)],
+          results: [new TelegramInlineQueryResultVideo({ video })],
         });
 
       default:
@@ -190,7 +193,6 @@ export default class TelegramExecutionContext {
       case 'voice':
       case 'photo':
       case 'message':
-      case 'guest_message':
         return await this.api.sendPhoto(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
@@ -199,10 +201,12 @@ export default class TelegramExecutionContext {
            photo,
            caption,
          });
+      case 'guest_message':
+        return await this.answerGuestQueryPhoto(photo, caption);
       case 'inline':
         return await this.api.answerInline(this.bot.api.toString(), {
           inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [new TelegramInlineQueryResultPhoto(photo)],
+          results: [new TelegramInlineQueryResultPhoto({ photo })],
         });
 
       default:
@@ -221,7 +225,6 @@ export default class TelegramExecutionContext {
     switch (this.update_type) {
       case 'voice':
       case 'message':
-      case 'guest_message':
         return await this.api.sendVoice(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
@@ -230,6 +233,8 @@ export default class TelegramExecutionContext {
            voice,
            caption,
          });
+      case 'guest_message':
+        return await this.answerGuestQueryVoice(voice, caption);
       default:
         return null;
     }
@@ -281,15 +286,57 @@ export default class TelegramExecutionContext {
 
   /**
    * Answer a guest query
+   * @param result - the result to reply with
+   * @returns Promise with the API response
+   */
+  async answerGuestQuery(result: TelegramInlineQueryResult) {
+    return await this.api.answerGuestQuery(this.bot.api.toString(), {
+      guest_query_id: this.update.guest_message?.guest_query_id ?? '',
+      result,
+    });
+  }
+
+  /**
+   * Answer a guest query with text
    * @param message - text to reply with
    * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
    * @returns Promise with the API response
    */
-  async answerGuestQuery(message: string, parse_mode = '') {
-    return await this.api.answerGuestQuery(this.bot.api.toString(), {
-      guest_query_id: this.update.guest_message?.guest_query_id ?? '',
-      result: new TelegramInlineQueryResultArticle({ content: message, title: 'Response', parse_mode }),
-    });
+  async answerGuestQueryText(message: string, parse_mode = '') {
+    return await this.answerGuestQuery(new TelegramInlineQueryResultArticle({ content: message, title: 'Response', parse_mode }));
+  }
+
+  /**
+   * Answer a guest query with a photo
+   * @param photo - url or file_id to photo
+   * @param caption - photo caption
+   * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
+   * @returns Promise with the API response
+   */
+  async answerGuestQueryPhoto(photo: string, caption = '', parse_mode = '') {
+    return await this.answerGuestQuery(new TelegramInlineQueryResultPhoto({ photo, caption, parse_mode }));
+  }
+
+  /**
+   * Answer a guest query with a video
+   * @param video - url or file_id to video
+   * @param caption - video caption
+   * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
+   * @returns Promise with the API response
+   */
+  async answerGuestQueryVideo(video: string, caption = '', parse_mode = '') {
+    return await this.answerGuestQuery(new TelegramInlineQueryResultVideo({ video, caption, parse_mode }));
+  }
+
+  /**
+   * Answer a guest query with a voice message
+   * @param voice - url or file_id to voice
+   * @param caption - voice caption
+   * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
+   * @returns Promise with the API response
+   */
+  async answerGuestQueryVoice(voice: string, caption = '', parse_mode = '') {
+    return await this.answerGuestQuery(new TelegramInlineQueryResultVoice({ voice, caption, parse_mode }));
   }
 
 
@@ -319,6 +366,10 @@ export default class TelegramExecutionContext {
         parse_mode,
         ...options,
       });
+    }
+
+    if (this.update_type === 'guest_message') {
+      return await this.answerGuestQueryText(message, parse_mode);
     }
 
     const response = await this.api.sendMessage(this.bot.api.toString(), {
@@ -357,10 +408,6 @@ export default class TelegramExecutionContext {
       case 'message':
       case 'photo':
       case 'document':
-      case 'guest_message':
-        if (this.update_type === 'guest_message') {
-          return await this.answerGuestQuery(message, parse_mode);
-        }
         if (reply) {
           return await this.api.sendMessage(this.bot.api.toString(), {
             ...options,
@@ -378,6 +425,8 @@ export default class TelegramExecutionContext {
            text: message,
            parse_mode,
          });
+      case 'guest_message':
+        return await this.answerGuestQueryText(message, parse_mode);
       case 'business_message':
          return await this.api.sendMessage(this.bot.api.toString(), {
            chat_id: this.getChatId(),

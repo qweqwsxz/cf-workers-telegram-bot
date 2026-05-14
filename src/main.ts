@@ -34,6 +34,7 @@ import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
 import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
 import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultArticle.js';
 import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
+import TelegramInlineQueryResultVoice from './types/TelegramInlineQueryResultVoice.js';
 import ChatPermissions from './types/ChatPermissions.js';
 import TelegramBusinessMessage from './types/TelegramBusinessMessage.js';
 import TelegramCallbackQuery from './types/TelegramCallbackQuery.js';
@@ -78,6 +79,7 @@ export {
 	TelegramInlineQueryResultPhoto,
 	TelegramInlineQueryResultArticle,
 	TelegramInlineQueryResultVideo,
+	TelegramInlineQueryResultVoice,
 	ChatPermissions,
 	TelegramBusinessMessage,
 	TelegramCallbackQuery,
