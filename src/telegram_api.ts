@@ -1,7 +1,4 @@
 import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
-import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultArticle.js';
-import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
-import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
 
 /** Interface for common Telegram API parameters */
 export interface TelegramApiBaseParams {
