@@ -3,19 +3,23 @@ import TelegramInputMessageContent from './TelegramInputMessageContent.js';
 
 export default class TelegramInlineQueryResultVideo extends TelegramInlineQueryResult {
 	video_url: string;
+	mime_type: string;
 	thumb_url: string;
-	photo_width?: number;
-	photo_height?: number;
-	title?: string;
-	description?: string;
+	title: string;
 	caption?: string;
 	parse_mode?: string;
-	caption_entities?: string;
-	// reply_markup?: TelegramInlineKeyboardMarkup;
+	video_width?: number;
+	video_height?: number;
+	video_duration?: number;
+	description?: string;
 	input_message_content?: TelegramInputMessageContent;
-	constructor(video: string) {
+	constructor(data: { video: string; title?: string; caption?: string; parse_mode?: string }) {
 		super('video');
-		this.video_url = video;
-		this.thumb_url = video;
+		this.video_url = data.video;
+		this.mime_type = 'video/mp4';
+		this.thumb_url = data.video;
+		this.title = data.title ?? 'Video';
+		this.caption = data.caption;
+		this.parse_mode = data.parse_mode;
 	}
 }

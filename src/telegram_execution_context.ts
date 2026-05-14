@@ -369,6 +369,10 @@ export default class TelegramExecutionContext {
     }
 
     if (this.update_type === 'guest_message') {
+      if (this.drafts.has(draft_id)) {
+        return new Response('Query already answered', { status: 200 });
+      }
+      this.drafts.set(draft_id, -1);
       return await this.answerGuestQueryText(message, parse_mode);
     }
 

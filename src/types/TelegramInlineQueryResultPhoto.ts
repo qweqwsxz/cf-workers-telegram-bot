@@ -13,9 +13,13 @@ export default class TelegramInlineQueryResultPhoto extends TelegramInlineQueryR
 	caption_entities?: string;
 	// reply_markup?: TelegramInlineKeyboardMarkup;
 	input_message_content?: TelegramInputMessageContent;
-	constructor(photo: string) {
+	constructor(data: { photo: string; caption?: string; parse_mode?: string; title?: string; description?: string }) {
 		super('photo');
-		this.photo_url = photo;
-		this.thumb_url = photo;
+		this.photo_url = data.photo;
+		this.thumb_url = data.photo;
+		this.caption = data.caption;
+		this.parse_mode = data.parse_mode;
+		this.title = data.title;
+		this.description = data.description;
 	}
 }

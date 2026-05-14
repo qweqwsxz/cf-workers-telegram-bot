@@ -1,3 +1,4 @@
+import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
 import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultArticle.js';
 import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
 import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
@@ -64,7 +65,7 @@ export interface AnswerCallbackParams {
 /** Interface for inline query parameters */
 export interface AnswerInlineParams {
   inline_query_id: number | string;
-  results: TelegramInlineQueryResultArticle[] | TelegramInlineQueryResultPhoto[] | TelegramInlineQueryResultVideo[];
+  results: TelegramInlineQueryResult[];
   cache_time?: number;
   is_personal?: boolean;
   next_offset?: string;
@@ -73,7 +74,7 @@ export interface AnswerInlineParams {
 /** Interface for guest query parameters */
 export interface AnswerGuestParams {
   guest_query_id: string;
-  result: TelegramInlineQueryResultArticle | TelegramInlineQueryResultPhoto | TelegramInlineQueryResultVideo;
+  result: TelegramInlineQueryResult;
 }
 
 /** Interface for invoice parameters */
