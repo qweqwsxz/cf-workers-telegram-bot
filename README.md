@@ -33,24 +33,24 @@ npm install @codebam/cf-workers-telegram-bot
 import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
 
 export interface Env {
-  SECRET_TELEGRAM_API_TOKEN: string;
+	SECRET_TELEGRAM_API_TOKEN: string;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
 
-    await bot
-      .command('start', async (ctx) => {
-        await ctx.reply('Hello! I am running on Cloudflare Workers.');
-      })
-      .onMessage(async (ctx) => {
-        await ctx.reply(`You said: ${ctx.text}`);
-      })
-      .handle(request);
+		await bot
+			.command('start', async (ctx) => {
+				await ctx.reply('Hello! I am running on Cloudflare Workers.');
+			})
+			.onMessage(async (ctx) => {
+				await ctx.reply(`You said: ${ctx.text}`);
+			})
+			.handle(request);
 
-    return new Response('ok');
-  },
+		return new Response('ok');
+	},
 };
 ```
 
@@ -66,15 +66,19 @@ export default {
 The `consumer` directory in this repository serves as a template for new projects. It is included as a git submodule.
 
 1. **Clone the repository with submodules**:
+
    ```sh
    git clone --recursive https://github.com/codebam/cf-workers-telegram-bot.git
    ```
-   *Or, if you've already cloned it:*
+
+   _Or, if you've already cloned it:_
+
    ```sh
    git submodule update --init --recursive
    ```
 
 2. **Copy the consumer directory**:
+
    ```sh
    cp -r consumer my-new-bot
    cd my-new-bot
@@ -86,33 +90,39 @@ The `consumer` directory in this repository serves as a template for new project
 
 4. **Set your Telegram Token**:
    Get a token from [@BotFather](https://t.me/BotFather) and add it to your worker:
+
    ```sh
    npx wrangler secret put SECRET_TELEGRAM_API_TOKEN
    ```
 
 5. **Deploy**:
+
    ```sh
    npm run deploy
    ```
 
-5. **Set Webhook**:
+6. **Set Webhook**:
    Visit the following URL in your browser to register your worker with Telegram:
    `https://<your-worker>.<your-subdomain>.workers.dev/<SECRET_TELEGRAM_API_TOKEN>/setWebhook`
 
 ## Deployment
 
 ### Manual Deployment
+
 Use [Wrangler](https://developers.cloudflare.com/workers/wrangler/) to deploy:
+
 ```sh
 npx wrangler deploy
 ```
 
 ### GitHub Actions
+
 To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action) or Cloudflare's built-in [GitHub integration](https://developers.cloudflare.com/workers/ci-cd/github-actions/).
 
-
 ## API Documentation
+
 Detailed API documentation is available at [cf-workers-telegram-bot.codebam.ca](https://cf-workers-telegram-bot.codebam.ca).
 
 ## License
+
 Apache-2.0
