@@ -150,52 +150,73 @@ export default class TelegramExecutionContext {
    * @param options - any additional options to pass to sendVideo
    * @returns Promise with the API response
    */
-  async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
-    switch (this.update_type) {
-      case 'voice':
-      case 'message':
-        return await this.api.sendVideo(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           reply_to_message_id: this.getMessageId(),
-           video,
-         });
-      case 'business_message':
-        try {
-  return await this.api.sendVideo(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-           video,
-         });
-} catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-    console.warn('Business connection invalid, retrying without business_connection_id');
-    return await this.api.sendVideo(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           
-           video,
-         });
-  }
-  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
-}
-      case 'guest_message':
-        return await this.answerGuestQueryVideo(video);
-      case 'inline':
-        return await this.api.answerInline(this.bot.api.toString(), {
-          ...options,
-          inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [{ type: 'video', id: crypto.randomUUID(), video_url: video, mime_type: 'video/mp4', thumbnail_url: video, title: 'Video' }],
-        });
 
-      default:
-        return null;
+  /**
+   * Helper to handle business connection fallbacks
+   */
+  private async withBusinessFallback<T>(
+    params: any,
+    apiMethod: (botApi: string, data: any) => Promise<T>
+  ): Promise<T | null> {
+    try {
+      return await apiMethod(this.bot.api.toString(), params);
+    } catch (e) {
+      if (e instanceof Error) {
+        if (e.message === 'BUSINESS_CONNECTION_INVALID') {
+          console.warn('Business connection invalid, retrying without business_connection_id');
+          const { business_connection_id, ...retryParams } = params;
+          try {
+            return await apiMethod(this.bot.api.toString(), retryParams);
+          } catch (retryError) {
+            if (retryError instanceof Error && retryError.message === 'PEER_ID_INVALID') {
+              console.error('Peer invalid, cannot deliver message even without business connection');
+              return null;
+            }
+            throw retryError;
+          }
+        }
+        if (e.message === 'PEER_ID_INVALID') {
+          console.error('Peer invalid, cannot deliver message');
+          return null;
+        }
+      }
+      throw e;
     }
+  }
+
+  /**
+   * Reply to the last message with a video
+   * @param video - string to a video on the internet or a file_id on telegram
+   * @param options - any additional options to pass to sendVideo
+   * @returns Promise with the API response
+   */
+  async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
+    const params: any = {
+      ...options,
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      reply_to_message_id: this.getMessageId(),
+      video,
+    };
+
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
+      return await this.withBusinessFallback(params, (api, data) => this.api.sendVideo(api, data));
+    }
+
+    if (this.update_type === 'guest_message') {
+      return await this.answerGuestQueryVideo(video);
+    }
+
+    if (this.update_type === 'inline') {
+      return await this.api.answerInline(this.bot.api.toString(), {
+        ...options,
+        inline_query_id: this.update.inline_query?.id.toString() ?? '',
+        results: [{ type: 'video', id: crypto.randomUUID(), video_url: video, mime_type: 'video/mp4', thumbnail_url: video, title: 'Video' }],
+      });
+    }
+
+    return await this.api.sendVideo(this.bot.api.toString(), params);
   }
 
   /**
@@ -215,54 +236,32 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async replyPhoto(photo: string, caption = '', options: Record<string, number | string | boolean> = {}) {
-    switch (this.update_type) {
-      case 'voice':
-      case 'photo':
-      case 'message':
-        return await this.api.sendPhoto(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           reply_to_message_id: this.getMessageId(),
-           photo,
-           caption,
-         });
-      case 'business_message':
-        try {
-  return await this.api.sendPhoto(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-           photo,
-           caption,
-         });
-} catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-    console.warn('Business connection invalid, retrying without business_connection_id');
-    return await this.api.sendPhoto(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           
-           photo,
-           caption,
-         });
-  }
-  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
-}
-      case 'guest_message':
-        return await this.answerGuestQueryPhoto(photo, caption);
-      case 'inline':
-        return await this.api.answerInline(this.bot.api.toString(), {
-          inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [{ type: 'photo', id: crypto.randomUUID(), photo_url: photo, thumbnail_url: photo }],
-        });
+    const params: any = {
+      ...options,
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      reply_to_message_id: this.getMessageId(),
+      photo,
+      caption,
+    };
 
-      default:
-        return null;
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
+      return await this.withBusinessFallback(params, (api, data) => this.api.sendPhoto(api, data));
     }
+
+    if (this.update_type === 'guest_message') {
+      return await this.answerGuestQueryPhoto(photo, caption);
+    }
+
+    if (this.update_type === 'inline') {
+      return await this.api.answerInline(this.bot.api.toString(), {
+        inline_query_id: this.update.inline_query?.id.toString() ?? '',
+        results: [{ type: 'photo', id: crypto.randomUUID(), photo_url: photo, thumbnail_url: photo }],
+      });
+    }
+
+    return await this.api.sendPhoto(this.bot.api.toString(), params);
   }
 
   /**
@@ -273,47 +272,25 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async replyVoice(voice: string, caption = '', options: Record<string, number | string | boolean> = {}) {
-    switch (this.update_type) {
-      case 'voice':
-      case 'message':
-        return await this.api.sendVoice(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           reply_to_message_id: this.getMessageId(),
-           voice,
-           caption,
-         });
-      case 'business_message':
-        try {
-  return await this.api.sendVoice(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-           voice,
-           caption,
-         });
-} catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-    console.warn('Business connection invalid, retrying without business_connection_id');
-    return await this.api.sendVoice(this.bot.api.toString(), {
-          ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           
-           voice,
-           caption,
-         });
-  }
-  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
-}
-      case 'guest_message':
-        return await this.answerGuestQueryVoice(voice, caption);
-      default:
-        return null;
+    const params: any = {
+      ...options,
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      reply_to_message_id: this.getMessageId(),
+      voice,
+      caption,
+    };
+
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
+      return await this.withBusinessFallback(params, (api, data) => this.api.sendVoice(api, data));
     }
+
+    if (this.update_type === 'guest_message') {
+      return await this.answerGuestQueryVoice(voice, caption);
+    }
+
+    return await this.api.sendVoice(this.bot.api.toString(), params);
   }
 
   /**
@@ -321,40 +298,18 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async sendTyping() {
-    switch (this.update_type) {
-      case 'voice':
-      case 'message':
-      case 'photo':
-      case 'document':
-         return await this.api.sendChatAction(this.bot.api.toString(), {
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           action: 'typing',
-         });
-      case 'business_message':
-        try {
-  return await this.api.sendChatAction(this.bot.api.toString(), {
-           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           action: 'typing',
-         });
-} catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-    console.warn('Business connection invalid, retrying without business_connection_id');
-    return await this.api.sendChatAction(this.bot.api.toString(), {
-           
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           action: 'typing',
-         });
-  }
-  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
-}
-      default:
-        return null;
+    const params: any = {
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      action: 'typing',
+    };
+
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
+      return await this.withBusinessFallback(params, (api, data) => this.api.sendChatAction(api, data));
     }
+
+    return await this.api.sendChatAction(this.bot.api.toString(), params);
   }
 
   /**
@@ -448,32 +403,19 @@ export default class TelegramExecutionContext {
     options: Record<string, number | string | boolean | object> = {},
   ) {
     const message_id = this.drafts.get(draft_id);
-    const business_connection_id = this.update.business_message?.business_connection_id?.toString();
 
     if (message_id) {
-      try {
-        return await this.api.editMessageText(this.bot.api.toString(), {
-          chat_id: this.getChatId(),
-          message_id,
-          text: message,
-          parse_mode,
-          business_connection_id,
-          ...options,
-        });
-      } catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-          console.warn('Business connection invalid, retrying without business_connection_id');
-          return await this.api.editMessageText(this.bot.api.toString(), {
-            chat_id: this.getChatId(),
-            message_id,
-            text: message,
-            parse_mode,
-            ...options,
-          });
-        }
-        if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
+      const params: any = {
+        chat_id: this.getChatId(),
+        message_id,
+        text: message,
+        parse_mode,
+        ...options,
+      };
+      if (this.update_type === 'business_message') {
+        params.business_connection_id = this.update.business_message?.business_connection_id;
       }
+      return await this.withBusinessFallback(params, (api, data) => this.api.editMessageText(api, data));
     }
 
     if (this.update_type === 'guest_message') {
@@ -484,33 +426,21 @@ export default class TelegramExecutionContext {
       return await this.answerGuestQueryText(message, parse_mode);
     }
 
-    let response: Response;
-    try {
-      response = await this.api.sendMessage(this.bot.api.toString(), {
-        ...options,
-        chat_id: this.getChatId(),
-        message_thread_id: this.getThreadId(),
-        text: message,
-        parse_mode,
-        business_connection_id,
-      });
-    } catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-        console.warn('Business connection invalid, retrying without business_connection_id');
-        response = await this.api.sendMessage(this.bot.api.toString(), {
-          ...options,
-          chat_id: this.getChatId(),
-          message_thread_id: this.getThreadId(),
-          text: message,
-          parse_mode,
-        });
-      } else {
-        if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
-      }
+    const params: any = {
+      ...options,
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      text: message,
+      parse_mode,
+    };
+
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
     }
 
-    if (response.status === 200) {
+    const response = await this.withBusinessFallback(params, (api, data) => this.api.sendMessage(api, data));
+
+    if (response && response.status === 200) {
       const cloned = response.clone();
       try {
         const json = (await cloned.json()) as { ok: boolean; result: { message_id: number } };
@@ -533,68 +463,38 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
-    switch (this.update_type) {
-      case 'voice':
-      case 'message':
-      case 'photo':
-      case 'document':
-        if (reply) {
-          return await this.api.sendMessage(this.bot.api.toString(), {
-            ...options,
-             chat_id: this.getChatId(),
-             message_thread_id: this.getThreadId(),
-             reply_to_message_id: this.getMessageId(),
-             text: message,
-             parse_mode,
-           });
-        }
-         return await this.api.sendMessage(this.bot.api.toString(), {
-           ...options,
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           text: message,
-           parse_mode,
-         });
-      case 'guest_message':
-        return await this.answerGuestQueryText(message, parse_mode);
-      case 'business_message':
-        try {
-          return await this.api.sendMessage(this.bot.api.toString(), {
-            chat_id: this.getChatId(),
-            message_thread_id: this.getThreadId(),
-            text: message,
-            business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-            parse_mode,
-          });
-        } catch (e) {
-      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
-      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
-            console.warn('Business connection invalid, retrying without business_connection_id');
-            return await this.api.sendMessage(this.bot.api.toString(), {
-              chat_id: this.getChatId(),
-              message_thread_id: this.getThreadId(),
-              text: message,
-              parse_mode,
-            });
-          }
-          throw e;
-        }
-      case 'callback':
-        if (this.update.callback_query?.message?.chat.id) {
-          return await this.api.sendMessage(this.bot.api.toString(), {
-            ...options,
-             chat_id: this.update.callback_query.message.chat.id.toString(),
-             message_thread_id: this.getThreadId(),
-             text: message,
-             parse_mode,
-           });
-        }
-        return null;
-      case 'inline':
-        return await this.replyInline('Response', message, parse_mode);
-      default:
-        return null;
+    if (this.update_type === 'guest_message') {
+      return await this.answerGuestQueryText(message, parse_mode);
     }
+
+    if (this.update_type === 'inline') {
+      return await this.replyInline('Response', message, parse_mode);
+    }
+
+    const params: any = {
+      ...options,
+      chat_id: this.getChatId(),
+      message_thread_id: this.getThreadId(),
+      text: message,
+      parse_mode,
+    };
+
+    if (reply) {
+      params.reply_to_message_id = this.getMessageId();
+    }
+
+    if (this.update_type === 'business_message') {
+      params.business_connection_id = this.update.business_message?.business_connection_id;
+      return await this.withBusinessFallback(params, (api, data) => this.api.sendMessage(api, data));
+    }
+
+    if (this.update_type === 'callback') {
+      if (this.update.callback_query?.message?.chat.id) {
+         params.chat_id = this.update.callback_query.message.chat.id.toString();
+      }
+    }
+
+    return await this.api.sendMessage(this.bot.api.toString(), params);
   }
 
   /**
@@ -606,17 +506,23 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async sendStarsInvoice(title: string, description: string, payload: string, amount: number) {
-    return await this.api.sendInvoice(this.bot.api.toString(), {
+    const params: any = {
        chat_id: this.getChatId(),
        message_thread_id: this.getThreadId(),
-       business_connection_id: this.update.business_message?.business_connection_id?.toString(),
        title,
        description,
        payload,
        provider_token: '',
        currency: 'XTR',
        prices: [{ label: title, amount }],
-     });
+     };
+
+     if (this.update_type === 'business_message') {
+       params.business_connection_id = this.update.business_message?.business_connection_id;
+       return await this.withBusinessFallback(params, (api, data) => this.api.sendInvoice(api, data));
+     }
+
+     return await this.api.sendInvoice(this.bot.api.toString(), params);
   }
 
   /**

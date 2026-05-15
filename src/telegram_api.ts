@@ -160,10 +160,12 @@ export default class TelegramApi {
       }
 
       if (errorDescription.includes('BUSINESS_CONNECTION_INVALID') || errorDescription.includes('BUSINESS_PEER_INVALID')) {
+        console.warn(`Telegram API business error: ${errorDescription}`);
         throw new Error('BUSINESS_CONNECTION_INVALID');
       }
 
       if (errorDescription.includes('PEER_ID_INVALID')) {
+        console.warn(`Telegram API peer error: ${errorDescription}`);
         throw new Error('PEER_ID_INVALID');
       }
 
