@@ -496,12 +496,15 @@ export default class TelegramExecutionContext {
     options: Record<string, number | string | boolean | object> = {},
     finish = false
   ) {
-    if (finish) {
-      return await this.reply(message, parse_mode, true, options as any);
+    if (this.update_type === 'guest_message') {
+      if (finish) {
+        return await this.answerGuestQueryText(message, parse_mode);
+      }
+      return null;
     }
 
-    if (this.update_type === 'guest_message') {
-      return await this.answerGuestQueryText(message, parse_mode);
+    if (finish) {
+      return await this.reply(message, parse_mode, true, options as any);
     }
 
     const params: SendMessageDraftParams = {
