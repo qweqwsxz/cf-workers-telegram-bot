@@ -34,7 +34,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 	};
 
 	renderer.listitem = (item) => {
-		return renderer.parser.parseInline(item.tokens);
+		return renderer.parser.parse(item.tokens).trim();
 	};
 
 	renderer.strong = ({ tokens }) => `<b>${renderer.parser.parseInline(tokens)}</b>`;
