@@ -1,6 +1,6 @@
 {
 	"name": "@codebam/cf-workers-telegram-bot",
-	"version": "11.17.0",
+	"version": "11.18.0",
 	"description": "serverless telegram bot on cf workers",
 	"main": "./dist/main.js",
 	"module": "./dist/main.js",
@@ -17,7 +17,6 @@
 		"webhook"
 	],
 	"type": "module",
-	"private": true,
 	"publishConfig": {
 		"access": "public"
 	},
