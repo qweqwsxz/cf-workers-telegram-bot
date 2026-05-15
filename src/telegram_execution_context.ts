@@ -141,7 +141,7 @@ export default class TelegramExecutionContext {
       }
     }
 
-    if (ownerId !== undefined && this.getChatId() === ownerId.toString()) {
+    if (ownerId !== undefined && (this.getChatId() === ownerId.toString() || this.userId === ownerId)) {
       return false;
     }
 

@@ -109,4 +109,78 @@ describe('telegram bot', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  // Test for business message handling
+  it('business message from owner should be skipped', async () => {
+    const handler = vi.fn().mockResolvedValue(new Response('handler_called'));
+    const bot = new TelegramBot('123456789').on(':message', handler);
+    
+    const ownerId = 999;
+    const connectionId = 'conn123';
+    const originalFetch = globalThis.fetch;
+    
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true,
+      result: {
+        user: { id: ownerId },
+        can_reply: true
+      }
+    }), { status: 200 }));
+
+    const request = new Request('http://example.com/123456789', {
+      method: 'POST',
+      body: JSON.stringify({
+        business_message: {
+          business_connection_id: connectionId,
+          from: { id: ownerId },
+          chat: { id: 123, type: 'private' },
+          text: 'Hello from owner',
+          message_id: 1
+        }
+      }),
+    });
+
+    const response = await bot.handle(request);
+    expect(await response.text()).toBe('ok');
+    expect(handler).not.toHaveBeenCalled();
+    
+    globalThis.fetch = originalFetch;
+  });
+
+  it('business message from user should be processed', async () => {
+    const handler = vi.fn().mockResolvedValue(new Response('handler_called'));
+    const bot = new TelegramBot('123456789').on(':message', handler);
+    
+    const ownerId = 999;
+    const userId = 123;
+    const connectionId = 'conn456';
+    const originalFetch = globalThis.fetch;
+    
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true,
+      result: {
+        user: { id: ownerId },
+        can_reply: true
+      }
+    }), { status: 200 }));
+
+    const request = new Request('http://example.com/123456789', {
+      method: 'POST',
+      body: JSON.stringify({
+        business_message: {
+          business_connection_id: connectionId,
+          from: { id: userId },
+          chat: { id: userId, type: 'private' },
+          text: 'Hello from user',
+          message_id: 2
+        }
+      }),
+    });
+
+    const response = await bot.handle(request);
+    expect(await response.text()).toBe('handler_called');
+    expect(handler).toHaveBeenCalled();
+    
+    globalThis.fetch = originalFetch;
+  });
 });
