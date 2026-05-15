@@ -7,7 +7,6 @@ import TelegramApi, {
   SendVoiceParams,
   SendChatActionParams,
   SendInvoiceParams,
-  EditMessageTextParams,
   SendMessageDraftParams
 } from './telegram_api.js';
 import TelegramBot from './telegram_bot.js';
@@ -504,7 +503,7 @@ export default class TelegramExecutionContext {
     }
 
     if (finish) {
-      return await this.reply(message, parse_mode, true, options as any);
+      return await this.reply(message, parse_mode, true, options as unknown as Record<string, string | number | boolean>);
     }
 
     const params: SendMessageDraftParams = {
