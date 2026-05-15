@@ -41,6 +41,7 @@ import TelegramCallbackQuery from './types/TelegramCallbackQuery.js';
 import TelegramPreCheckoutQuery from './types/TelegramPreCheckoutQuery.js';
 import TelegramDocument from './types/TelegramDocument.js';
 import TelegramSuccessfulPayment from './types/TelegramSuccessfulPayment.js';
+import { markdownToHtml, fetchTool } from './utils.js';
 
 export default TelegramBot;
 export {
@@ -86,4 +87,6 @@ export {
 	TelegramPreCheckoutQuery,
 	TelegramDocument,
 	TelegramSuccessfulPayment,
+	markdownToHtml,
+	fetchTool,
 };

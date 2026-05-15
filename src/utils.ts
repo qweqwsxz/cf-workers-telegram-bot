@@ -1,0 +1,132 @@
+import { marked } from 'marked';
+
+export async function markdownToHtml(s: string): Promise<string> {
+	const renderer = new marked.Renderer();
+
+	// Telegram supports: b, strong, i, em, u, ins, s, strike, del, span, tg-spoiler, a, code, pre, blockquote
+
+	renderer.heading = ({ tokens, depth }) => {
+		const text = renderer.parser.parseInline(tokens);
+		if (depth === 1) return `<b>${text}</b>\n\n`;
+		if (depth === 2) return `<b>${text}</b>\n\n`;
+		return `<b>${text}</b>\n\n`;
+	};
+
+	renderer.paragraph = ({ tokens }) => {
+		const text = renderer.parser.parseInline(tokens);
+		return `${text}\n\n`;
+	};
+
+	renderer.br = () => '\n';
+
+	renderer.list = ({ items, ordered, start }) => {
+		let result = '';
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			const prefix = ordered ? `${(start !== '' && start !== undefined) ? Number(start) + i : i + 1}. ` : '• ';
+			result += `${prefix}${renderer.listitem(item)}\n`;
+		}
+		return result;
+	};
+
+	renderer.listitem = (item) => {
+		return renderer.parser.parseInline(item.tokens);
+	};
+
+	renderer.strong = ({ tokens }) => `<b>${renderer.parser.parseInline(tokens)}</b>`;
+	renderer.em = ({ tokens }) => `<i>${renderer.parser.parseInline(tokens)}</i>`;
+	renderer.codespan = ({ text }) => `<code>${text}</code>`;
+	renderer.code = ({ text, lang }) => {
+		if (lang) {
+			return `<pre><code class="language-${lang}">${text}</code></pre>\n`;
+		}
+		return `<pre><code>${text}</code></pre>\n`;
+	};
+	renderer.del = ({ tokens }) => `<s>${renderer.parser.parseInline(tokens)}</s>`;
+	
+	renderer.link = ({ href, tokens }) => `<a href="${href}">${renderer.parser.parseInline(tokens)}</a>`;
+	renderer.image = ({ href, text }) => `<a href="${href}">${text}</a>`;
+	
+	renderer.blockquote = ({ tokens }) => {
+		return `<blockquote>${renderer.parser.parse(tokens)}</blockquote>\n`;
+	};
+
+	renderer.hr = () => `────────\n\n`;
+
+	// html tag pass-through for supported tags or escaping
+	renderer.html = ({ text }) => {
+		const allowedTags = [
+			'b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 
+			'span', 'tg-spoiler', 'a', 'code', 'pre', 'blockquote'
+		];
+		const match = /^<\/?([a-z0-9\-]+)(?:\s+[^>]*)?>/i.exec(text);
+		if (match) {
+			const tagName = match[1].toLowerCase();
+			if (allowedTags.includes(tagName)) {
+				return text; // Allow through
+			}
+		}
+		// Escape everything else
+		return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	};
+	
+	renderer.text = (token) => {
+		if ('tokens' in token && token.tokens) {
+			return renderer.parser.parseInline(token.tokens);
+		}
+		// Escape standard HTML entities
+		return token.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	};
+
+	marked.setOptions({
+		gfm: true,
+		breaks: true,
+	});
+
+	const parsed = await marked.parse(s, { renderer });
+	
+	// Trim multiple newlines
+	return parsed.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+export const fetchTool = {
+	name: 'fetch',
+	description:
+		'Make an HTTP request to fetch a website or API, returning the HTML or JSON. You MUST use this tool when the user asks to fetch a URL, visit a website, or make a GET request, instead of writing code.',
+	parameters: {
+		type: 'object',
+		properties: {
+			url: { type: 'string', description: 'The URL to fetch' },
+			method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE'], default: 'GET' },
+			headers: { type: 'object', description: 'HTTP headers to include in the request' },
+			body: { type: 'string', description: 'The request body' }
+		},
+		required: ['url']
+	},
+	function: async ({
+		url,
+		method,
+		headers,
+		body
+	}: {
+		url: string;
+		method?: string;
+		headers?: Record<string, string>;
+		body?: string;
+	}) => {
+		try {
+			const res = await fetch(url, {
+				method: method || 'GET',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Cloudflare Worker Telegram Bot)',
+					...headers
+				},
+				body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined
+			});
+			const text = await res.text();
+			return text.slice(0, 10000);
+		} catch (e) {
+			return `Error executing fetch: ${String(e)}`;
+		}
+	}
+};
