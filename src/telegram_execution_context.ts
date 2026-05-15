@@ -1,6 +1,16 @@
 import { Update as TelegramUpdate, InlineQueryResult as TelegramInlineQueryResult, ParseMode } from '@grammyjs/types';
-import TelegramApi from './telegram_api.js';
+import TelegramApi, {
+  TelegramApiBaseParams,
+  SendMessageParams,
+  SendPhotoParams,
+  SendVideoParams,
+  SendVoiceParams,
+  SendChatActionParams,
+  SendInvoiceParams,
+  EditMessageTextParams
+} from './telegram_api.js';
 import TelegramBot from './telegram_bot.js';
+
 
 
 
@@ -213,10 +223,10 @@ export default class TelegramExecutionContext {
   /**
    * Helper to handle business connection fallbacks
    */
-  private async withBusinessFallback<T>(
-    params: any,
-    apiMethod: (botApi: string, data: any) => Promise<T>
-  ): Promise<T | null> {
+  private async withBusinessFallback<T extends Partial<TelegramApiBaseParams>>(
+    params: T,
+    apiMethod: (botApi: string, data: T) => Promise<Response>
+  ): Promise<Response | null> {
     const connectionId = params.business_connection_id?.toString();
     
     if (connectionId) {
@@ -249,7 +259,7 @@ export default class TelegramExecutionContext {
         }
       }
 
-      if (ownerId !== undefined && params.chat_id.toString() === ownerId.toString()) {
+      if (ownerId !== undefined && params.chat_id?.toString() === ownerId.toString()) {
         return null;
       }
     }
@@ -273,7 +283,7 @@ export default class TelegramExecutionContext {
   }
 
   async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
-    const params: any = {
+    const params: SendVideoParams = {
       ...options,
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
@@ -282,7 +292,7 @@ export default class TelegramExecutionContext {
     };
 
     if (this.update_type === 'business_message') {
-      params.business_connection_id = this.update.business_message?.business_connection_id;
+      params['business_connection_id'] = this.update.business_message?.business_connection_id;
       return await this.withBusinessFallback(params, (api, data) => this.api.sendVideo(api, data));
     }
 
@@ -318,7 +328,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async replyPhoto(photo: string, caption = '', options: Record<string, number | string | boolean> = {}) {
-    const params: any = {
+    const params: SendPhotoParams = {
       ...options,
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
@@ -328,7 +338,7 @@ export default class TelegramExecutionContext {
     };
 
     if (this.update_type === 'business_message') {
-      params.business_connection_id = this.update.business_message?.business_connection_id;
+      params['business_connection_id'] = this.update.business_message?.business_connection_id;
       return await this.withBusinessFallback(params, (api, data) => this.api.sendPhoto(api, data));
     }
 
@@ -354,7 +364,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async replyVoice(voice: string, caption = '', options: Record<string, number | string | boolean> = {}) {
-    const params: any = {
+    const params: SendVoiceParams = {
       ...options,
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
@@ -364,7 +374,7 @@ export default class TelegramExecutionContext {
     };
 
     if (this.update_type === 'business_message') {
-      params.business_connection_id = this.update.business_message?.business_connection_id;
+      params['business_connection_id'] = this.update.business_message?.business_connection_id;
       return await this.withBusinessFallback(params, (api, data) => this.api.sendVoice(api, data));
     }
 
@@ -380,14 +390,14 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async sendTyping() {
-    const params: any = {
+    const params: SendChatActionParams = {
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
       action: 'typing',
     };
 
     if (this.update_type === 'business_message') {
-      params.business_connection_id = this.update.business_message?.business_connection_id;
+      params['business_connection_id'] = this.update.business_message?.business_connection_id;
       return await this.withBusinessFallback(params, (api, data) => this.api.sendChatAction(api, data));
     }
 
@@ -487,7 +497,7 @@ export default class TelegramExecutionContext {
     const message_id = this.drafts.get(draft_id);
 
     if (message_id) {
-      const params: any = {
+      const params: EditMessageTextParams = {
         chat_id: this.getChatId(),
         message_id,
         text: message,
@@ -508,8 +518,8 @@ export default class TelegramExecutionContext {
       return await this.answerGuestQueryText(message, parse_mode);
     }
 
-    const params: any = {
-      ...options,
+    const params: SendMessageParams = {
+      ...options as unknown as SendMessageParams, // Cast options to any here because options is a broad record
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
       text: message,
@@ -537,13 +547,6 @@ export default class TelegramExecutionContext {
     return response;
   }
 
-  /**
-   * Reply to the last message with text
-   * @param message - text to reply with
-   * @param parse_mode - one of HTML, MarkdownV2, Markdown, or an empty string for ascii
-   * @param options - any additional options to pass to sendMessage
-   * @returns Promise with the API response
-   */
   async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
     if (this.update_type === 'guest_message') {
       return await this.answerGuestQueryText(message, parse_mode);
@@ -553,7 +556,7 @@ export default class TelegramExecutionContext {
       return await this.replyInline('Response', message, parse_mode);
     }
 
-    const params: any = {
+    const params: SendMessageParams = {
       ...options,
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
@@ -566,13 +569,13 @@ export default class TelegramExecutionContext {
     }
 
     if (this.update_type === 'business_message') {
-      params.business_connection_id = this.update.business_message?.business_connection_id;
+      params['business_connection_id'] = this.update.business_message?.business_connection_id;
       return await this.withBusinessFallback(params, (api, data) => this.api.sendMessage(api, data));
     }
 
     if (this.update_type === 'callback') {
       if (this.update.callback_query?.message?.chat.id) {
-         params.chat_id = this.update.callback_query.message.chat.id.toString();
+         params['chat_id'] = this.update.callback_query.message.chat.id.toString();
       }
     }
 
@@ -588,8 +591,8 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async sendStarsInvoice(title: string, description: string, payload: string, amount: number) {
-    const params: any = {
-       chat_id: this.getChatId(),
+    const params: SendInvoiceParams = {
+        chat_id: this.getChatId(),
        message_thread_id: this.getThreadId(),
        title,
        description,
@@ -600,7 +603,7 @@ export default class TelegramExecutionContext {
      };
 
      if (this.update_type === 'business_message') {
-       params.business_connection_id = this.update.business_message?.business_connection_id;
+       params['business_connection_id'] = this.update.business_message?.business_connection_id;
        return await this.withBusinessFallback(params, (api, data) => this.api.sendInvoice(api, data));
      }
 

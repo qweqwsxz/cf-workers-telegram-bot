@@ -3,6 +3,7 @@ import { InlineQueryResult as TelegramInlineQueryResult } from '@grammyjs/types'
 
 /** Interface for common Telegram API parameters */
 export interface TelegramApiBaseParams {
+  [key: string]: unknown;
   chat_id: number | string;
   message_thread_id?: number;
   business_connection_id?: string | number;
@@ -118,7 +119,20 @@ export type TelegramApiParams =
   | AnswerPreCheckoutParams
   | Record<string, unknown>;
 
-/** Class representing the Telegram API and all its methods */
+/** Interface for edit message text parameters */
+export interface EditMessageTextParams extends Partial<TelegramApiBaseParams> {
+  [key: string]: unknown;
+  chat_id?: number | string;
+  message_id?: number;
+  inline_message_id?: string;
+  text: string;
+  parse_mode?: string;
+  disable_web_page_preview?: boolean;
+  reply_markup?: object;
+  business_connection_id?: string | number;
+}
+
+/** Class representing the telegram API and all its methods */
 export default class TelegramApi {
   /**
    * Get the API URL for a given bot API and slug
@@ -327,16 +341,7 @@ export default class TelegramApi {
    */
   async editMessageText(
     botApi: string,
-    data: {
-      chat_id?: number | string;
-      message_id?: number;
-      inline_message_id?: string;
-      text: string;
-      parse_mode?: string;
-      disable_web_page_preview?: boolean;
-      reply_markup?: object;
-      business_connection_id?: string | number;
-    },
+    data: EditMessageTextParams,
   ): Promise<Response> {
     const url = this.getApiUrl(botApi, 'editMessageText', data);
     return await this.fetchAndLog(url, 'editMessageText', data);
