@@ -159,7 +159,7 @@ export default class TelegramApi {
         // ignore
       }
 
-      if (errorDescription.includes('BUSINESS_CONNECTION_INVALID')) {
+      if (errorDescription.includes('BUSINESS_CONNECTION_INVALID') || errorDescription.includes('BUSINESS_PEER_INVALID')) {
         throw new Error('BUSINESS_CONNECTION_INVALID');
       }
 

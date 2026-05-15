@@ -160,13 +160,27 @@ export default class TelegramExecutionContext {
            video,
          });
       case 'business_message':
-        return await this.api.sendVideo(this.bot.api.toString(), {
+        try {
+  return await this.api.sendVideo(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
            business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            video,
          });
+} catch (e) {
+  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+    console.warn('Business connection invalid, retrying without business_connection_id');
+    return await this.api.sendVideo(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           
+           video,
+         });
+  }
+  throw e;
+}
       case 'guest_message':
         return await this.answerGuestQueryVideo(video);
       case 'inline':
@@ -211,7 +225,8 @@ export default class TelegramExecutionContext {
            caption,
          });
       case 'business_message':
-        return await this.api.sendPhoto(this.bot.api.toString(), {
+        try {
+  return await this.api.sendPhoto(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
@@ -219,6 +234,20 @@ export default class TelegramExecutionContext {
            photo,
            caption,
          });
+} catch (e) {
+  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+    console.warn('Business connection invalid, retrying without business_connection_id');
+    return await this.api.sendPhoto(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           
+           photo,
+           caption,
+         });
+  }
+  throw e;
+}
       case 'guest_message':
         return await this.answerGuestQueryPhoto(photo, caption);
       case 'inline':
@@ -252,7 +281,8 @@ export default class TelegramExecutionContext {
            caption,
          });
       case 'business_message':
-        return await this.api.sendVoice(this.bot.api.toString(), {
+        try {
+  return await this.api.sendVoice(this.bot.api.toString(), {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
@@ -260,6 +290,20 @@ export default class TelegramExecutionContext {
            voice,
            caption,
          });
+} catch (e) {
+  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+    console.warn('Business connection invalid, retrying without business_connection_id');
+    return await this.api.sendVoice(this.bot.api.toString(), {
+          ...options,
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           
+           voice,
+           caption,
+         });
+  }
+  throw e;
+}
       case 'guest_message':
         return await this.answerGuestQueryVoice(voice, caption);
       default:
@@ -283,12 +327,25 @@ export default class TelegramExecutionContext {
            action: 'typing',
          });
       case 'business_message':
-        return await this.api.sendChatAction(this.bot.api.toString(), {
+        try {
+  return await this.api.sendChatAction(this.bot.api.toString(), {
            business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
            action: 'typing',
          });
+} catch (e) {
+  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+    console.warn('Business connection invalid, retrying without business_connection_id');
+    return await this.api.sendChatAction(this.bot.api.toString(), {
+           
+           chat_id: this.getChatId(),
+           message_thread_id: this.getThreadId(),
+           action: 'typing',
+         });
+  }
+  throw e;
+}
       default:
         return null;
     }
