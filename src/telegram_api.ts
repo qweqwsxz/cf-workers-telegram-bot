@@ -163,6 +163,10 @@ export default class TelegramApi {
         throw new Error('BUSINESS_CONNECTION_INVALID');
       }
 
+      if (errorDescription.includes('PEER_ID_INVALID')) {
+        throw new Error('PEER_ID_INVALID');
+      }
+
       throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}${errorDescription ? ': ' + errorDescription : ''}`);
     }
     const cloned = response.clone();

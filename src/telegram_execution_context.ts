@@ -128,6 +128,8 @@ export default class TelegramExecutionContext {
   private getMessageId(): string {
     if (this.update.message?.message_id) {
       return this.update.message.message_id.toString();
+    } else if (this.update.business_message?.message_id) {
+      return this.update.business_message.message_id.toString();
     } else if (this.update.guest_message?.message_id) {
       return this.update.guest_message.message_id.toString();
     }
@@ -139,7 +141,7 @@ export default class TelegramExecutionContext {
    * @returns The message thread ID as a number or undefined
    */
   private getThreadId(): number | undefined {
-    return this.update.message?.message_thread_id;
+    return this.update.message?.message_thread_id ?? this.update.business_message?.message_thread_id;
   }
 
   /**
@@ -179,7 +181,7 @@ export default class TelegramExecutionContext {
            video,
          });
   }
-  throw e;
+  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
 }
       case 'guest_message':
         return await this.answerGuestQueryVideo(video);
@@ -246,7 +248,7 @@ export default class TelegramExecutionContext {
            caption,
          });
   }
-  throw e;
+  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
 }
       case 'guest_message':
         return await this.answerGuestQueryPhoto(photo, caption);
@@ -302,7 +304,7 @@ export default class TelegramExecutionContext {
            caption,
          });
   }
-  throw e;
+  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
 }
       case 'guest_message':
         return await this.answerGuestQueryVoice(voice, caption);
@@ -344,7 +346,7 @@ export default class TelegramExecutionContext {
            action: 'typing',
          });
   }
-  throw e;
+  if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
 }
       default:
         return null;
@@ -465,7 +467,7 @@ export default class TelegramExecutionContext {
             ...options,
           });
         }
-        throw e;
+        if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
       }
     }
 
@@ -498,7 +500,7 @@ export default class TelegramExecutionContext {
           parse_mode,
         });
       } else {
-        throw e;
+        if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message even without business connection'); return null; } throw e;
       }
     }
 
