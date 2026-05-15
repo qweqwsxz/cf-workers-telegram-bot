@@ -32,7 +32,7 @@
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/codebam/cf-workers-telegram-bot.git"
+		"url": "git+https://github.com/codebam/cf-workers-telegram-bot.git"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260511.1",
