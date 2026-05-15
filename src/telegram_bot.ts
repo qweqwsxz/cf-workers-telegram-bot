@@ -187,6 +187,11 @@ export default class TelegramBot {
           const ctx = new TelegramExecutionContext(this, this.update);
           this.currentContext = ctx;
 
+          if (!(await ctx.shouldProcess())) {
+            console.log('Skipping update processing based on context validation');
+            return new Response('ok');
+          }
+
           // Run middleware
           for (const middleware of this.middleware) {
             const result = await middleware(ctx);

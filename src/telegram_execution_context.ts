@@ -84,6 +84,60 @@ export default class TelegramExecutionContext {
    * Determine the type of update received
    * @returns The update type as a string
    */
+
+  /**
+   * Determine if the current update should be processed.
+   * For business messages, this checks if the connection is valid and has reply permissions.
+   */
+  public async shouldProcess(): Promise<boolean> {
+    if (this.update_type !== 'business_message') {
+      return true;
+    }
+
+    const connectionId = this.update.business_message?.business_connection_id?.toString();
+    if (!connectionId) {
+      return true;
+    }
+
+    if (TelegramExecutionContext.poisonedConnections.has(connectionId)) {
+      return false;
+    }
+
+    let ownerId = TelegramExecutionContext.businessOwners.get(connectionId);
+    if (ownerId === undefined) {
+      try {
+        const response = await this.api.getBusinessConnection(this.bot.api.toString(), connectionId);
+        if (response.status === 200) {
+          const json = await response.json() as { ok: boolean, result: { user: { id: number }, user_chat_id: number, can_reply: boolean } };
+          if (json.ok && json.result) {
+            ownerId = json.result.user?.id || json.result.user_chat_id;
+            if (ownerId) {
+              TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
+            }
+            if (json.result.can_reply === false) {
+              console.warn('Business connection ' + connectionId + ' lacks reply permissions, poisoning connection');
+              TelegramExecutionContext.poisonedConnections.add(connectionId);
+              return false;
+            }
+          }
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+           console.warn('Business connection ' + connectionId + ' is invalid, poisoning connection');
+           TelegramExecutionContext.poisonedConnections.add(connectionId);
+           return false;
+        }
+        console.warn('Failed to fetch business connection info:', e);
+      }
+    }
+
+    if (ownerId !== undefined && this.getChatId() === ownerId.toString()) {
+      return false;
+    }
+
+    return true;
+  }
+
   private determineUpdateType(): string {
     if (this.update.message?.photo) {
       return 'photo';
