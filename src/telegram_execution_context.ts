@@ -390,6 +390,10 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async sendTyping() {
+    if (this.update_type === 'guest_message') {
+      return null;
+    }
+
     const params: SendChatActionParams = {
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
