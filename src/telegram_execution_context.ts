@@ -388,14 +388,28 @@ export default class TelegramExecutionContext {
     const business_connection_id = this.update.business_message?.business_connection_id?.toString();
 
     if (message_id) {
-      return await this.api.editMessageText(this.bot.api.toString(), {
-        chat_id: this.getChatId(),
-        message_id,
-        text: message,
-        parse_mode,
-        business_connection_id,
-        ...options,
-      });
+      try {
+        return await this.api.editMessageText(this.bot.api.toString(), {
+          chat_id: this.getChatId(),
+          message_id,
+          text: message,
+          parse_mode,
+          business_connection_id,
+          ...options,
+        });
+      } catch (e) {
+        if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+          console.warn('Business connection invalid, retrying without business_connection_id');
+          return await this.api.editMessageText(this.bot.api.toString(), {
+            chat_id: this.getChatId(),
+            message_id,
+            text: message,
+            parse_mode,
+            ...options,
+          });
+        }
+        throw e;
+      }
     }
 
     if (this.update_type === 'guest_message') {
@@ -406,14 +420,30 @@ export default class TelegramExecutionContext {
       return await this.answerGuestQueryText(message, parse_mode);
     }
 
-    const response = await this.api.sendMessage(this.bot.api.toString(), {
-      ...options,
-      chat_id: this.getChatId(),
-      message_thread_id: this.getThreadId(),
-      text: message,
-      parse_mode,
-      business_connection_id,
-    });
+    let response: Response;
+    try {
+      response = await this.api.sendMessage(this.bot.api.toString(), {
+        ...options,
+        chat_id: this.getChatId(),
+        message_thread_id: this.getThreadId(),
+        text: message,
+        parse_mode,
+        business_connection_id,
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+        console.warn('Business connection invalid, retrying without business_connection_id');
+        response = await this.api.sendMessage(this.bot.api.toString(), {
+          ...options,
+          chat_id: this.getChatId(),
+          message_thread_id: this.getThreadId(),
+          text: message,
+          parse_mode,
+        });
+      } else {
+        throw e;
+      }
+    }
 
     if (response.status === 200) {
       const cloned = response.clone();
@@ -463,13 +493,26 @@ export default class TelegramExecutionContext {
       case 'guest_message':
         return await this.answerGuestQueryText(message, parse_mode);
       case 'business_message':
-         return await this.api.sendMessage(this.bot.api.toString(), {
-           chat_id: this.getChatId(),
-           message_thread_id: this.getThreadId(),
-           text: message,
-           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
-           parse_mode,
-         });
+        try {
+          return await this.api.sendMessage(this.bot.api.toString(), {
+            chat_id: this.getChatId(),
+            message_thread_id: this.getThreadId(),
+            text: message,
+            business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
+            parse_mode,
+          });
+        } catch (e) {
+          if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+            console.warn('Business connection invalid, retrying without business_connection_id');
+            return await this.api.sendMessage(this.bot.api.toString(), {
+              chat_id: this.getChatId(),
+              message_thread_id: this.getThreadId(),
+              text: message,
+              parse_mode,
+            });
+          }
+          throw e;
+        }
       case 'callback':
         if (this.update.callback_query?.message?.chat.id) {
           return await this.api.sendMessage(this.bot.api.toString(), {

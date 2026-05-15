@@ -154,11 +154,16 @@ export default class TelegramApi {
       let errorDescription = '';
       try {
         const json = (await cloned.json()) as { description?: string };
-        errorDescription = json.description ? `: ${json.description}` : '';
+        errorDescription = json.description || '';
       } catch {
         // ignore
       }
-      throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}${errorDescription}`);
+
+      if (errorDescription.includes('BUSINESS_CONNECTION_INVALID')) {
+        throw new Error('BUSINESS_CONNECTION_INVALID');
+      }
+
+      throw new Error(`Telegram API error: ${String(response.status)} ${response.statusText}${errorDescription ? ': ' + errorDescription : ''}`);
     }
     const cloned = response.clone();
     try {
