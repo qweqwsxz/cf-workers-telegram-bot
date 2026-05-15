@@ -10,6 +10,9 @@ import TelegramBot from './telegram_bot.js';
 
 /** Class representing the context of execution */
 export default class TelegramExecutionContext {
+  /** Cache for business connection owners */
+  private static businessOwners = new Map<string, number>();
+
   /** an instance of the telegram bot */
   bot: TelegramBot;
   /** an instance of the telegram update */
@@ -158,6 +161,33 @@ export default class TelegramExecutionContext {
     params: any,
     apiMethod: (botApi: string, data: any) => Promise<T>
   ): Promise<T | null> {
+    // If we have a business connection, validate the peer first to avoid redundant retries
+    if (params.business_connection_id) {
+      const connectionId = params.business_connection_id.toString();
+      let ownerId = TelegramExecutionContext.businessOwners.get(connectionId);
+
+      if (ownerId === undefined) {
+        try {
+          const response = await this.api.getBusinessConnection(this.bot.api.toString(), connectionId);
+          if (response.status === 200) {
+            const json = await response.json() as { ok: boolean, result: { user: { id: number } } };
+            if (json.ok && json.result?.user?.id) {
+              ownerId = json.result.user.id;
+              TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to fetch business connection info:', e);
+        }
+      }
+
+      // If the chat_id is the owner of the connection, we cannot use the business connection
+      if (ownerId !== undefined && params.chat_id.toString() === ownerId.toString()) {
+        const { business_connection_id, ...retryParams } = params;
+        return await apiMethod(this.bot.api.toString(), retryParams);
+      }
+    }
+
     try {
       return await apiMethod(this.bot.api.toString(), params);
     } catch (e) {

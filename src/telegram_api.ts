@@ -373,6 +373,17 @@ export default class TelegramApi {
   }
 
   /**
+   * Get information about a business connection
+   * @param botApi - full URL to the telegram API without slug
+   * @param business_connection_id - unique identifier of the business connection
+   * @returns Promise with the API response
+   */
+  async getBusinessConnection(botApi: string, business_connection_id: string): Promise<Response> {
+    const url = this.getApiUrl(botApi, 'getBusinessConnection', { business_connection_id });
+    return await this.fetchAndLog(url, 'getBusinessConnection', { business_connection_id });
+  }
+
+  /**
    * Get basic information about the bot
    * @param botApi - full URL to the telegram API without slug
    * @returns Promise with the API response
