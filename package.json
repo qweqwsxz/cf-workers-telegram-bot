@@ -18,11 +18,6 @@
 	],
 	"type": "module",
 	"private": true,
-	"workspaces": [
-		"consumer",
-		"webapp",
-		"ai-workflow"
-	],
 	"publishConfig": {
 		"access": "public"
 	},
