@@ -176,11 +176,10 @@ export default class TelegramExecutionContext {
               if (ownerId) {
                 TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
               }
-              // If the bot cannot reply via this connection, treat it as invalid for our purposes
+              // If the bot cannot reply via this connection, we shouldn't attempt it
               if (json.result.can_reply === false) {
-                console.warn('Bot cannot reply via this business connection, falling back');
-                const { business_connection_id, ...retryParams } = params;
-                return await apiMethod(this.bot.api.toString(), retryParams);
+                console.warn('Bot cannot reply via this business connection');
+                return null;
               }
             }
           }
@@ -191,8 +190,8 @@ export default class TelegramExecutionContext {
 
       // If the chat_id is the owner of the connection, we cannot use the business connection
       if (ownerId !== undefined && params.chat_id.toString() === ownerId.toString()) {
-        const { business_connection_id, ...retryParams } = params;
-        return await apiMethod(this.bot.api.toString(), retryParams);
+        console.warn('Cannot reply to business account owner via business connection');
+        return null;
       }
     }
 
@@ -201,17 +200,8 @@ export default class TelegramExecutionContext {
     } catch (e) {
       if (e instanceof Error) {
         if (e.message === 'BUSINESS_CONNECTION_INVALID') {
-          console.warn('Business connection invalid, retrying without business_connection_id');
-          const { business_connection_id, ...retryParams } = params;
-          try {
-            return await apiMethod(this.bot.api.toString(), retryParams);
-          } catch (retryError) {
-            if (retryError instanceof Error && retryError.message === 'PEER_ID_INVALID') {
-              console.error('Peer invalid, cannot deliver message even without business connection');
-              return null;
-            }
-            throw retryError;
-          }
+          console.warn('Business connection invalid, cannot deliver message');
+          return null;
         }
         if (e.message === 'PEER_ID_INVALID') {
           console.error('Peer invalid, cannot deliver message');
