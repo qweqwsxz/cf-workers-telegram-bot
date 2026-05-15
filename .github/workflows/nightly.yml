@@ -1,0 +1,32 @@
+name: publish nightly
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish-nightly:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          registry-url: https://npm.pkg.github.com/
+          scope: "@codebam"
+      - run: npm ci
+      - name: Update version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SHA=$(git rev-parse --short HEAD)
+          NIGHTLY_VERSION="${VERSION}-nightly.${SHA}"
+          echo "Publishing version $NIGHTLY_VERSION"
+          npm version $NIGHTLY_VERSION --no-git-tag-version
+      - run: npm run build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
