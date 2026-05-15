@@ -12,6 +12,8 @@ import TelegramBot from './telegram_bot.js';
 export default class TelegramExecutionContext {
   /** Cache for business connection owners */
   private static businessOwners = new Map<string, number>();
+  /** Cache for dead business connections */
+  private static poisonedConnections = new Set<string>();
 
   /** an instance of the telegram bot */
   bot: TelegramBot;
@@ -161,11 +163,14 @@ export default class TelegramExecutionContext {
     params: any,
     apiMethod: (botApi: string, data: any) => Promise<T>
   ): Promise<T | null> {
-    // If we have a business connection, validate the peer first to avoid redundant retries
-    if (params.business_connection_id) {
-      const connectionId = params.business_connection_id.toString();
-      let ownerId = TelegramExecutionContext.businessOwners.get(connectionId);
+    const connectionId = params.business_connection_id?.toString();
+    
+    if (connectionId) {
+      if (TelegramExecutionContext.poisonedConnections.has(connectionId)) {
+        return null;
+      }
 
+      let ownerId = TelegramExecutionContext.businessOwners.get(connectionId);
       if (ownerId === undefined) {
         try {
           const response = await this.api.getBusinessConnection(this.bot.api.toString(), connectionId);
@@ -176,21 +181,21 @@ export default class TelegramExecutionContext {
               if (ownerId) {
                 TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
               }
-              // If the bot cannot reply via this connection, we shouldn't attempt it
               if (json.result.can_reply === false) {
-                console.warn('Bot cannot reply via this business connection');
+                TelegramExecutionContext.poisonedConnections.add(connectionId);
                 return null;
               }
             }
           }
         } catch (e) {
-          console.warn('Failed to fetch business connection info:', e);
+          if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+             TelegramExecutionContext.poisonedConnections.add(connectionId);
+             return null;
+          }
         }
       }
 
-      // If the chat_id is the owner of the connection, we cannot use the business connection
       if (ownerId !== undefined && params.chat_id.toString() === ownerId.toString()) {
-        console.warn('Cannot reply to business account owner via business connection');
         return null;
       }
     }
@@ -200,11 +205,12 @@ export default class TelegramExecutionContext {
     } catch (e) {
       if (e instanceof Error) {
         if (e.message === 'BUSINESS_CONNECTION_INVALID') {
-          console.warn('Business connection invalid, cannot deliver message');
+          if (connectionId) {
+            TelegramExecutionContext.poisonedConnections.add(connectionId);
+          }
           return null;
         }
         if (e.message === 'PEER_ID_INVALID') {
-          console.error('Peer invalid, cannot deliver message');
           return null;
         }
       }
@@ -212,12 +218,6 @@ export default class TelegramExecutionContext {
     }
   }
 
-  /**
-   * Reply to the last message with a video
-   * @param video - string to a video on the internet or a file_id on telegram
-   * @param options - any additional options to pass to sendVideo
-   * @returns Promise with the API response
-   */
   async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
     const params: any = {
       ...options,
