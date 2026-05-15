@@ -17,7 +17,12 @@
 		"webhook"
 	],
 	"type": "module",
-	"private": false,
+	"private": true,
+	"workspaces": [
+		"consumer",
+		"webapp",
+		"ai-workflow"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -54,6 +59,7 @@
 	},
 	"dependencies": {
 		"@eslint/eslintrc": "^3.3.5",
+		"@grammyjs/types": "^3.27.2",
 		"marked": "^18.0.3"
 	},
 	"typedocOptions": {

@@ -1,11 +1,12 @@
+import { Update as TelegramUpdate, InlineQueryResult as TelegramInlineQueryResult, ParseMode } from '@grammyjs/types';
 import TelegramApi from './telegram_api.js';
 import TelegramBot from './telegram_bot.js';
-import TelegramInlineQueryResultArticle from './types/TelegramInlineQueryResultArticle.js';
-import TelegramInlineQueryResultPhoto from './types/TelegramInlineQueryResultPhoto.js';
-import TelegramUpdate from './types/TelegramUpdate.js';
-import TelegramInlineQueryResultVideo from './types/TelegramInlineQueryResultVideo.js';
-import TelegramInlineQueryResultVoice from './types/TelegramInlineQueryResultVoice.js';
-import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
+
+
+
+
+
+
 
 /** Class representing the context of execution */
 export default class TelegramExecutionContext {
@@ -54,7 +55,7 @@ export default class TelegramExecutionContext {
    * @returns The user ID or undefined if not available
    */
   get userId(): number | undefined {
-    return this.update.message?.from.id ?? this.update.business_message?.from.id ?? this.update.guest_message?.from.id;
+    return this.update.message?.from?.id ?? this.update.business_message?.from?.id ?? this.update.guest_message?.from?.id;
   }
 
   /**
@@ -163,7 +164,7 @@ export default class TelegramExecutionContext {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            video,
          });
       case 'guest_message':
@@ -172,7 +173,7 @@ export default class TelegramExecutionContext {
         return await this.api.answerInline(this.bot.api.toString(), {
           ...options,
           inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [new TelegramInlineQueryResultVideo({ video })],
+          results: [{ type: 'video', id: crypto.randomUUID(), video_url: video, mime_type: 'video/mp4', thumbnail_url: video, title: 'Video' }],
         });
 
       default:
@@ -214,7 +215,7 @@ export default class TelegramExecutionContext {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            photo,
            caption,
          });
@@ -223,7 +224,7 @@ export default class TelegramExecutionContext {
       case 'inline':
         return await this.api.answerInline(this.bot.api.toString(), {
           inline_query_id: this.update.inline_query?.id.toString() ?? '',
-          results: [new TelegramInlineQueryResultPhoto({ photo })],
+          results: [{ type: 'photo', id: crypto.randomUUID(), photo_url: photo, thumbnail_url: photo }],
         });
 
       default:
@@ -255,7 +256,7 @@ export default class TelegramExecutionContext {
           ...options,
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
-           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            voice,
            caption,
          });
@@ -283,7 +284,7 @@ export default class TelegramExecutionContext {
          });
       case 'business_message':
         return await this.api.sendChatAction(this.bot.api.toString(), {
-           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
            action: 'typing',
@@ -304,7 +305,7 @@ export default class TelegramExecutionContext {
     if (this.update_type === 'inline') {
       return await this.api.answerInline(this.bot.api.toString(), {
         inline_query_id: this.update.inline_query?.id.toString() ?? '',
-        results: [new TelegramInlineQueryResultArticle({ content: message, title, parse_mode })],
+        results: [{ type: 'article', id: crypto.randomUUID(), title: title ?? '', input_message_content: { message_text: message, parse_mode: parse_mode as ParseMode } }],
       });
     }
     return null;
@@ -329,7 +330,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async answerGuestQueryText(message: string, parse_mode = '') {
-    return await this.answerGuestQuery(new TelegramInlineQueryResultArticle({ content: message, title: 'Response', parse_mode }));
+    return await this.answerGuestQuery({ type: 'article', id: crypto.randomUUID(), title: 'Response', input_message_content: { message_text: message, parse_mode: parse_mode as ParseMode } });
   }
 
   /**
@@ -340,7 +341,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async answerGuestQueryPhoto(photo: string, caption = '', parse_mode = '') {
-    return await this.answerGuestQuery(new TelegramInlineQueryResultPhoto({ photo, caption, parse_mode }));
+    return await this.answerGuestQuery({ type: 'photo', id: crypto.randomUUID(), photo_url: photo, thumbnail_url: photo, caption, parse_mode: parse_mode as ParseMode });
   }
 
   /**
@@ -351,7 +352,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async answerGuestQueryVideo(video: string, caption = '', parse_mode = '') {
-    return await this.answerGuestQuery(new TelegramInlineQueryResultVideo({ video, caption, parse_mode }));
+    return await this.answerGuestQuery({ type: 'video', id: crypto.randomUUID(), video_url: video, mime_type: 'video/mp4', thumbnail_url: video, title: 'Video', caption, parse_mode: parse_mode as ParseMode });
   }
 
   /**
@@ -362,7 +363,7 @@ export default class TelegramExecutionContext {
    * @returns Promise with the API response
    */
   async answerGuestQueryVoice(voice: string, caption = '', parse_mode = '') {
-    return await this.answerGuestQuery(new TelegramInlineQueryResultVoice({ voice, caption, parse_mode }));
+    return await this.answerGuestQuery({ type: 'voice', id: crypto.randomUUID(), voice_url: voice, title: 'Voice', caption, parse_mode: parse_mode as ParseMode });
   }
 
 
@@ -384,7 +385,7 @@ export default class TelegramExecutionContext {
     options: Record<string, number | string | boolean | object> = {},
   ) {
     const message_id = this.drafts.get(draft_id);
-    const business_connection_id = this.update.business_message?.business_connection_id.toString();
+    const business_connection_id = this.update.business_message?.business_connection_id?.toString();
 
     if (message_id) {
       return await this.api.editMessageText(this.bot.api.toString(), {
@@ -466,11 +467,11 @@ export default class TelegramExecutionContext {
            chat_id: this.getChatId(),
            message_thread_id: this.getThreadId(),
            text: message,
-           business_connection_id: this.update.business_message?.business_connection_id.toString() ?? '',
+           business_connection_id: this.update.business_message?.business_connection_id?.toString() ?? '',
            parse_mode,
          });
       case 'callback':
-        if (this.update.callback_query?.message.chat.id) {
+        if (this.update.callback_query?.message?.chat.id) {
           return await this.api.sendMessage(this.bot.api.toString(), {
             ...options,
              chat_id: this.update.callback_query.message.chat.id.toString(),
@@ -499,7 +500,7 @@ export default class TelegramExecutionContext {
     return await this.api.sendInvoice(this.bot.api.toString(), {
        chat_id: this.getChatId(),
        message_thread_id: this.getThreadId(),
-       business_connection_id: this.update.business_message?.business_connection_id.toString(),
+       business_connection_id: this.update.business_message?.business_connection_id?.toString(),
        title,
        description,
        payload,

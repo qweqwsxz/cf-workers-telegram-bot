@@ -2,6 +2,6 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	test: {
-		exclude: [],
+		include: ['test/**/*.spec.ts'],
 	},
 });

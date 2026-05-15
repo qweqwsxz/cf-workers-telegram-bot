@@ -1,4 +1,5 @@
-import TelegramInlineQueryResult from './types/TelegramInlineQueryResult.js';
+import { InlineQueryResult as TelegramInlineQueryResult } from '@grammyjs/types';
+
 
 /** Interface for common Telegram API parameters */
 export interface TelegramApiBaseParams {

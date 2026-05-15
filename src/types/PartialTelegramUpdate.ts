@@ -1,10 +1,10 @@
-import TelegramBusinessMessage from './TelegramBusinessMessage.js';
-import TelegramInlineQuery from './TelegramInlineQuery.js';
-import TelegramMessage from './TelegramMessage.js';
+import { Message as TelegramBusinessMessage } from '@grammyjs/types';
+import { InlineQuery as TelegramInlineQuery } from '@grammyjs/types';
+import { Message as TelegramMessage } from '@grammyjs/types';
 import TelegramGuestMessage from './TelegramGuestMessage.js';
-import TelegramPreCheckoutQuery from './TelegramPreCheckoutQuery.js';
-import TelegramCallbackQuery from './TelegramCallbackQuery.js';
-import TelegramBusinessConnection from './TelegramBusinessConnection.js';
+import { PreCheckoutQuery as TelegramPreCheckoutQuery } from '@grammyjs/types';
+import { CallbackQuery as TelegramCallbackQuery } from '@grammyjs/types';
+import { BusinessConnection as TelegramBusinessConnection } from '@grammyjs/types';
 
 interface PartialTelegramUpdate {
 	update_id?: number;

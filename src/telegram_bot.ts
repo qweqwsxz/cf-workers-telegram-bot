@@ -1,4 +1,5 @@
-import TelegramUpdate from './types/TelegramUpdate.js';
+import { Update as TelegramUpdate } from '@grammyjs/types';
+
 import TelegramExecutionContext from './telegram_execution_context.js';
 import Webhook from './webhook.js';
 
@@ -11,8 +12,7 @@ export default class TelegramBot {
   /** The telegram webhook object */
   webhook: Webhook = new Webhook('', new Request('http://127.0.0.1'));
   /** The telegram update object */
-  update: TelegramUpdate = new TelegramUpdate({});
-  /** The telegram commands record map */
+  update: TelegramUpdate = { update_id: 0 } as TelegramUpdate;  /** The telegram commands record map */
   commands: Record<string, (ctx: TelegramExecutionContext) => Promise<Response | void>> = {};
   /** Middleware functions to run before handlers */
   middleware: ((ctx: TelegramExecutionContext) => Promise<Response | void>)[] = [];
