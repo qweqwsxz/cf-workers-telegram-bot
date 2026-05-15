@@ -171,7 +171,8 @@ export default class TelegramExecutionContext {
            video,
          });
 } catch (e) {
-  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
     console.warn('Business connection invalid, retrying without business_connection_id');
     return await this.api.sendVideo(this.bot.api.toString(), {
           ...options,
@@ -237,7 +238,8 @@ export default class TelegramExecutionContext {
            caption,
          });
 } catch (e) {
-  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
     console.warn('Business connection invalid, retrying without business_connection_id');
     return await this.api.sendPhoto(this.bot.api.toString(), {
           ...options,
@@ -293,7 +295,8 @@ export default class TelegramExecutionContext {
            caption,
          });
 } catch (e) {
-  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
     console.warn('Business connection invalid, retrying without business_connection_id');
     return await this.api.sendVoice(this.bot.api.toString(), {
           ...options,
@@ -337,7 +340,8 @@ export default class TelegramExecutionContext {
            action: 'typing',
          });
 } catch (e) {
-  if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
     console.warn('Business connection invalid, retrying without business_connection_id');
     return await this.api.sendChatAction(this.bot.api.toString(), {
            
@@ -457,7 +461,8 @@ export default class TelegramExecutionContext {
           ...options,
         });
       } catch (e) {
-        if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
           console.warn('Business connection invalid, retrying without business_connection_id');
           return await this.api.editMessageText(this.bot.api.toString(), {
             chat_id: this.getChatId(),
@@ -490,6 +495,7 @@ export default class TelegramExecutionContext {
         business_connection_id,
       });
     } catch (e) {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
       if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
         console.warn('Business connection invalid, retrying without business_connection_id');
         response = await this.api.sendMessage(this.bot.api.toString(), {
@@ -561,7 +567,8 @@ export default class TelegramExecutionContext {
             parse_mode,
           });
         } catch (e) {
-          if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
+      if (e instanceof Error && e.message === 'PEER_ID_INVALID') { console.error('Peer invalid, cannot deliver message'); return null; }
+      if (e instanceof Error && e.message === 'BUSINESS_CONNECTION_INVALID') {
             console.warn('Business connection invalid, retrying without business_connection_id');
             return await this.api.sendMessage(this.bot.api.toString(), {
               chat_id: this.getChatId(),

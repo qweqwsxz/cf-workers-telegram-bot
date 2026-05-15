@@ -41,10 +41,11 @@ export async function markdownToHtml(s: string): Promise<string> {
 	renderer.em = ({ tokens }) => `<i>${renderer.parser.parseInline(tokens)}</i>`;
 	renderer.codespan = ({ text }) => `<code>${text}</code>`;
 	renderer.code = ({ text, lang }) => {
+		const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 		if (lang) {
-			return `<pre><code class="language-${lang}">${text}</code></pre>\n`;
+			return `<pre><code class="language-${lang}">${escapedText}</code></pre>\n`;
 		}
-		return `<pre><code>${text}</code></pre>\n`;
+		return `<pre><code>${escapedText}</code></pre>\n`;
 	};
 	renderer.del = ({ tokens }) => `<s>${renderer.parser.parseInline(tokens)}</s>`;
 	
