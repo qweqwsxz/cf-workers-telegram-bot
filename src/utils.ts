@@ -7,8 +7,12 @@ export async function markdownToHtml(s: string): Promise<string> {
 
 	renderer.heading = ({ tokens, depth }) => {
 		const text = renderer.parser.parseInline(tokens);
-		if (depth === 1) return `<b>${text}</b>\n\n`;
-		if (depth === 2) return `<b>${text}</b>\n\n`;
+		if (depth === 1) {
+			return `<b>${text}</b>\n\n`;
+		}
+		if (depth === 2) {
+			return `<b>${text}</b>\n\n`;
+		}
 		return `<b>${text}</b>\n\n`;
 	};
 
@@ -59,7 +63,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 			'b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 
 			'span', 'tg-spoiler', 'a', 'code', 'pre', 'blockquote'
 		];
-		const match = /^<\/?([a-z0-9\-]+)(?:\s+[^>]*)?>/i.exec(text);
+		const match = /^<\/?([a-z0-9-]+)(?:\s+[^>]*)?>/i.exec(text);
 		if (match) {
 			const tagName = match[1].toLowerCase();
 			if (allowedTags.includes(tagName)) {
