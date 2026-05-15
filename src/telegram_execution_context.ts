@@ -170,10 +170,18 @@ export default class TelegramExecutionContext {
         try {
           const response = await this.api.getBusinessConnection(this.bot.api.toString(), connectionId);
           if (response.status === 200) {
-            const json = await response.json() as { ok: boolean, result: { user: { id: number } } };
-            if (json.ok && json.result?.user?.id) {
-              ownerId = json.result.user.id;
-              TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
+            const json = await response.json() as { ok: boolean, result: { user: { id: number }, user_chat_id: number, can_reply: boolean } };
+            if (json.ok && json.result) {
+              ownerId = json.result.user?.id || json.result.user_chat_id;
+              if (ownerId) {
+                TelegramExecutionContext.businessOwners.set(connectionId, ownerId);
+              }
+              // If the bot cannot reply via this connection, treat it as invalid for our purposes
+              if (json.result.can_reply === false) {
+                console.warn('Bot cannot reply via this business connection, falling back');
+                const { business_connection_id, ...retryParams } = params;
+                return await apiMethod(this.bot.api.toString(), retryParams);
+              }
             }
           }
         } catch (e) {
