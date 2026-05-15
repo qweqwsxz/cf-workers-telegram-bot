@@ -7,7 +7,8 @@ import TelegramApi, {
   SendVoiceParams,
   SendChatActionParams,
   SendInvoiceParams,
-  EditMessageTextParams
+  EditMessageTextParams,
+  SendMessageDraftParams
 } from './telegram_api.js';
 import TelegramBot from './telegram_bot.js';
 
@@ -493,58 +494,30 @@ export default class TelegramExecutionContext {
     draft_id: number,
     parse_mode = '',
     options: Record<string, number | string | boolean | object> = {},
+    finish = false
   ) {
-    const message_id = this.drafts.get(draft_id);
-
-    if (message_id) {
-      const params: EditMessageTextParams = {
-        chat_id: this.getChatId(),
-        message_id,
-        text: message,
-        parse_mode,
-        ...options,
-      };
-      if (this.update_type === 'business_message') {
-        params.business_connection_id = this.update.business_message?.business_connection_id;
-      }
-      return await this.withBusinessFallback(params, (api, data) => this.api.editMessageText(api, data));
+    if (finish) {
+      return await this.reply(message, parse_mode, true, options as any);
     }
 
     if (this.update_type === 'guest_message') {
-      if (this.drafts.has(draft_id)) {
-        return new Response('Query already answered', { status: 200 });
-      }
-      this.drafts.set(draft_id, -1);
       return await this.answerGuestQueryText(message, parse_mode);
     }
 
-    const params: SendMessageParams = {
-      ...options as unknown as SendMessageParams, // Cast options to any here because options is a broad record
+    const params: SendMessageDraftParams = {
+      ...options as unknown as SendMessageDraftParams,
       chat_id: this.getChatId(),
       message_thread_id: this.getThreadId(),
       text: message,
       parse_mode,
+      draft_id,
     };
 
     if (this.update_type === 'business_message') {
       params.business_connection_id = this.update.business_message?.business_connection_id;
     }
 
-    const response = await this.withBusinessFallback(params, (api, data) => this.api.sendMessage(api, data));
-
-    if (response && response.status === 200) {
-      const cloned = response.clone();
-      try {
-        const json = (await cloned.json()) as { ok: boolean; result: { message_id: number } };
-        if (json.ok && json.result?.message_id) {
-          this.drafts.set(draft_id, json.result.message_id);
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    return response;
+    return await this.withBusinessFallback(params, (api, data) => this.api.sendMessageDraft(api, data));
   }
 
   async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
