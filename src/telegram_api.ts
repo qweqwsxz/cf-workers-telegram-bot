@@ -215,7 +215,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendChatAction(botApi: string, data: SendChatActionParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendChatAction', data, 'POST');
     return await this.fetchAndLog(url, 'sendChatAction', data);
   }
 
@@ -231,8 +231,7 @@ export default class TelegramApi {
       throw new Error('No file_id provided');
     }
 
-    const url = this.getApiUrl(botApi, '', data, 'POST');
-    const response = await this.fetchAndLog(url, 'getFile', data);
+    const url = this.getApiUrl(botApi, 'getFile', data, 'POST');const response = await this.fetchAndLog(url, 'getFile', data);
 
     const json: { ok: boolean; result?: { file_path: string }; description?: string } = await response.json();
 
@@ -254,7 +253,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendMessage(botApi: string, data: SendMessageParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendMessage', data, 'POST');
     return await this.fetchAndLog(url, 'sendMessage', data);
   }
 
@@ -265,7 +264,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendVideo(botApi: string, data: SendVideoParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendVideo', data, 'POST');
     return await this.fetchAndLog(url, 'sendVideo', data);
   }
 
@@ -276,7 +275,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendPhoto(botApi: string, data: SendPhotoParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendPhoto', data, 'POST');
     return await this.fetchAndLog(url, 'sendPhoto', data);
   }
 
@@ -287,7 +286,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendVoice(botApi: string, data: SendVoiceParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendVoice', data, 'POST');
     return await this.fetchAndLog(url, 'sendVoice', data);
   }
 
@@ -305,7 +304,7 @@ export default class TelegramApi {
       is_personal: data.is_personal,
       next_offset: data.next_offset,
     };
-    const url = this.getApiUrl(botApi, 'answerInlineQuery', params);
+    const url = this.getApiUrl(botApi, 'answerInlineQuery', params, 'POST');
     return await this.fetchAndLog(url, 'answerInlineQuery', params);
   }
 
@@ -316,7 +315,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async answerCallback(botApi: string, data: AnswerCallbackParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'answerCallbackQuery', data, 'POST');
     return await this.fetchAndLog(url, 'answerCallbackQuery', data);
   }
 
@@ -327,7 +326,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async answerGuestQuery(botApi: string, data: AnswerGuestParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'answerGuestQuery', data, 'POST');
     return await this.fetchAndLog(url, 'answerGuestQuery', data);
   }
 
@@ -338,7 +337,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async deleteMessage(botApi: string, data: { chat_id: number | string; message_id: number }): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'deleteMessage', data, 'POST');
     return await this.fetchAndLog(url, 'deleteMessage', data);
   }
 
@@ -352,7 +351,7 @@ export default class TelegramApi {
     botApi: string,
     data: EditMessageTextParams,
   ): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'editMessageText', data, 'POST');
     return await this.fetchAndLog(url, 'editMessageText', data);
   }
 
@@ -360,7 +359,7 @@ export default class TelegramApi {
     botApi: string,
     data: SendMessageDraftParams,
   ): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendMessageDraft', data, 'POST');
     return await this.fetchAndLog(url, 'sendMessageDraft', data);
   }
 
@@ -371,7 +370,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async sendInvoice(botApi: string, data: SendInvoiceParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'sendInvoice', data, 'POST');
     return await this.fetchAndLog(url, 'sendInvoice', data);
   }
 
@@ -382,7 +381,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async answerPreCheckoutQuery(botApi: string, data: AnswerPreCheckoutParams): Promise<Response> {
-    const url = this.getApiUrl(botApi, '', data, 'POST');
+    const url = this.getApiUrl(botApi, 'answerPreCheckoutQuery', data, 'POST');
     return await this.fetchAndLog(url, 'answerPreCheckoutQuery', data);
   }
 
@@ -393,7 +392,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async getBusinessConnection(botApi: string, business_connection_id: string): Promise<Response> {
-    const url = this.getApiUrl(botApi, 'getBusinessConnection', { business_connection_id });
+    const url = this.getApiUrl(botApi, 'getBusinessConnection', { business_connection_id }, 'POST');
     return await this.fetchAndLog(url, 'getBusinessConnection', { business_connection_id });
   }
 
@@ -403,7 +402,7 @@ export default class TelegramApi {
    * @returns Promise with the API response
    */
   async getMe(botApi: string): Promise<Response> {
-    const url = this.getApiUrl(botApi, 'getMe', {});
+    const url = this.getApiUrl(botApi, 'getMe', {}, 'GET');
     return await this.fetchAndLog(url, 'getMe', {});
   }
 }
