@@ -22,6 +22,7 @@
 	},
 	"scripts": {
 		"build": "tsc --project tsconfig.json",
+		"build:all": "npm run build && npm run build --prefix ai-workflow && npm run build --prefix consumer && npm run build --prefix webapp",
 		"lint": "eslint src",
 		"lint:all": "npm run lint && npm run lint --prefix ai-workflow && npm run lint --prefix consumer && npm run lint --prefix webapp",
 		"test": "vitest --config vitest.config.js",
@@ -39,6 +40,7 @@
 		"url": "git+https://github.com/codebam/cf-workers-telegram-bot.git"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.16.6",
 		"@eslint/js": "^10.0.1",
 		"@types/node": "^25.8.0",
 		"@typescript-eslint/eslint-plugin": "^8.59.3",

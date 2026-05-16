@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/packages/main"
+    directory: "/"
     schedule:
       interval: "weekly"
     allow:
@@ -9,9 +9,30 @@ updates:
     versioning-strategy: increase
 
   - package-ecosystem: "npm"
-    directory: "/packages/worker"
+    directory: "/ai-workflow"
     schedule:
       interval: "weekly"
     allow:
       - dependency-type: "all"
     versioning-strategy: increase
+
+  - package-ecosystem: "npm"
+    directory: "/consumer"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: "all"
+    versioning-strategy: increase
+
+  - package-ecosystem: "npm"
+    directory: "/webapp"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: "all"
+    versioning-strategy: increase
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
