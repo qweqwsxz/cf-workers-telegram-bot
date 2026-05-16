@@ -324,9 +324,7 @@ export async function streamAiResponseToTelegram(
 /**
  * Creates a mock TelegramExecutionContext for use in environments where the full context isn't available (e.g., Workflows).
  */
-export function createMockTelegramExecutionContext(
-	task: Record<string, unknown>,
-):   TelegramExecutionContext {
+export function createMockTelegramExecutionContext(task: Record<string, unknown>): TelegramExecutionContext {
 	return {
 		chat: { id: task.chatId as string },
 		from: { id: task.userId as number },
