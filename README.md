@@ -140,6 +140,9 @@ To automate deployments, use the [Wrangler Action](https://github.com/cloudflare
 - `npm run format`: Format the code using Prettier.
 - `npm run build`: Compile TypeScript and run type checks.
 - `npm run test`: Run unit tests with Vitest.
+- `npm run lint:all`: Run linting for the root project and all subprojects.
+- `npm run build:all`: Run build for the root project and all subprojects.
+- `npm run test:all`: Run tests for the root project and all subprojects.
 
 The pre-commit hook automatically runs formatting and linting on staged files (via `lint-staged`), followed by a full project type check and tests before every commit.
 

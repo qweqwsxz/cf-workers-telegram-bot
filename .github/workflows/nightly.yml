@@ -18,6 +18,14 @@ jobs:
           node-version: latest
           registry-url: https://npm.pkg.github.com/
           scope: "@codebam"
+      - id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-modules-
+      - run: npm i
       - run: npm ci
       - name: Update version
         run: |
