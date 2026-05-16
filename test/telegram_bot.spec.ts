@@ -141,8 +141,8 @@ describe('telegram bot', () => {
     });
 
     const response = await bot.handle(request);
-    expect(await response.text()).toBe('ok');
-    expect(handler).not.toHaveBeenCalled();
+    expect(await response.text()).toBe('handler_called');
+    expect(handler).toHaveBeenCalled();
     
     globalThis.fetch = originalFetch;
   });

@@ -22,6 +22,10 @@ export default class TelegramBot {
   defaultCommand = ':message';
   /** Optional secret token for webhook verification */
   secretToken?: string;
+  /** The bot's own user ID */
+  botId: number;
+  /** TTL for self-responses */
+  ttl = 2;
 
   /**
    *	Create a bot
@@ -31,6 +35,7 @@ export default class TelegramBot {
   constructor(token: string, options?: { defaultCommand?: string; secretToken?: string }) {
     this.token = token.trim();
     this.api = new URL('https://api.telegram.org/bot' + this.token);
+    this.botId = parseInt(this.token.split(':')[0]);
 
     if (options?.defaultCommand) {
       this.defaultCommand = options.defaultCommand;
