@@ -289,7 +289,7 @@ export default class TelegramExecutionContext {
 		}
 	}
 
-	async replyVideo(video: string, options: Record<string, number | string | boolean> = {}) {
+	async replyVideo(video: string, options: Partial<SendVideoParams> = {}) {
 		const params: SendVideoParams = {
 			...options,
 			chat_id: this.getChatId(),
@@ -336,7 +336,7 @@ export default class TelegramExecutionContext {
 	 * @param options - any additional options to pass to sendPhoto
 	 * @returns Promise with the API response
 	 */
-	async replyPhoto(photo: string, caption = '', options: Record<string, number | string | boolean> = {}) {
+	async replyPhoto(photo: string, caption = '', options: Partial<SendPhotoParams> = {}) {
 		const params: SendPhotoParams = {
 			...options,
 			chat_id: this.getChatId(),
@@ -372,7 +372,7 @@ export default class TelegramExecutionContext {
 	 * @param options - any additional options to pass to sendVoice
 	 * @returns Promise with the API response
 	 */
-	async replyVoice(voice: string, caption = '', options: Record<string, number | string | boolean> = {}) {
+	async replyVoice(voice: string, caption = '', options: Partial<SendVoiceParams> = {}) {
 		const params: SendVoiceParams = {
 			...options,
 			chat_id: this.getChatId(),
@@ -539,7 +539,7 @@ export default class TelegramExecutionContext {
 		message: string,
 		draft_id: number,
 		parse_mode = '',
-		options: Record<string, number | string | boolean | object> = {},
+		options: Partial<SendMessageDraftParams> = {},
 		finish = false,
 	) {
 		if (this.update_type === 'guest_message') {
@@ -550,11 +550,11 @@ export default class TelegramExecutionContext {
 		}
 
 		if (finish) {
-			return await this.reply(message, parse_mode, true, options as unknown as Record<string, string | number | boolean>);
+			return await this.reply(message, parse_mode, true, options as unknown as Partial<SendMessageParams>);
 		}
 
 		const params: SendMessageDraftParams = {
-			...(options as unknown as SendMessageDraftParams),
+			...(options as SendMessageDraftParams),
 			chat_id: this.getChatId(),
 			message_thread_id: this.getThreadId(),
 			text: message,
@@ -569,7 +569,7 @@ export default class TelegramExecutionContext {
 		return await this.withBusinessFallback(params, (api, data) => this.api.sendMessageDraft(api, data));
 	}
 
-	async reply(message: string, parse_mode = '', reply = true, options: Record<string, number | string | boolean> = {}) {
+	async reply(message: string, parse_mode = '', reply = true, options: Partial<SendMessageParams> = {}) {
 		if (this.update_type === 'guest_message') {
 			return await this.answerGuestQueryText(message, parse_mode);
 		}
