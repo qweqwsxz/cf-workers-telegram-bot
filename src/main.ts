@@ -43,6 +43,7 @@ import TelegramInlineQueryType from './types/TelegramInlineQueryType.js';
 
 
 import { markdownToHtml, fetchTool } from './utils.js';
+import { HistoryManager, getBalance } from './history_manager.js';
 
 export default TelegramBot;
 export {
@@ -90,4 +91,6 @@ export {
 	TelegramSuccessfulPayment,
 	markdownToHtml,
 	fetchTool,
+	HistoryManager,
+	getBalance,
 };
