@@ -39,9 +39,10 @@ export async function markdownToHtml(s: string): Promise<string> {
 
 	renderer.strong = ({ tokens }) => `<b>${renderer.parser.parseInline(tokens)}</b>`;
 	renderer.em = ({ tokens }) => `<i>${renderer.parser.parseInline(tokens)}</i>`;
-	renderer.codespan = ({ text }) => `<code>${text}</code>`;
+	const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	renderer.codespan = ({ text }) => `<code>${escapeHtml(text)}</code>`;
 	renderer.code = ({ text, lang }) => {
-		const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		const escapedText = escapeHtml(text);
 		if (lang) {
 			return `<pre><code class="language-${lang}">${escapedText}</code></pre>\n`;
 		}
@@ -49,8 +50,8 @@ export async function markdownToHtml(s: string): Promise<string> {
 	};
 	renderer.del = ({ tokens }) => `<s>${renderer.parser.parseInline(tokens)}</s>`;
 	
-	renderer.link = ({ href, tokens }) => `<a href="${href}">${renderer.parser.parseInline(tokens)}</a>`;
-	renderer.image = ({ href, text }) => `<a href="${href}">${text}</a>`;
+	renderer.link = ({ href, tokens }) => `<a href="${escapeHtml(href)}">${renderer.parser.parseInline(tokens)}</a>`;
+	renderer.image = ({ href, text }) => `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
 	
 	renderer.blockquote = ({ tokens }) => {
 		return `<blockquote>${renderer.parser.parse(tokens)}</blockquote>\n`;
@@ -72,7 +73,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 			}
 		}
 		// Escape everything else
-		return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return escapeHtml(text);
 	};
 	
 	renderer.text = (token) => {
@@ -80,7 +81,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 			return renderer.parser.parseInline(token.tokens);
 		}
 		// Escape standard HTML entities
-		return token.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return escapeHtml(token.text);
 	};
 
 	marked.setOptions({
