@@ -7,6 +7,16 @@ description: Performs a coordinated stable release across the cf-workers-telegra
 
 Follow this procedure to release a stable version of the `@codebam/cf-workers-telegram-bot` library and its associated submodules (`webapp`, `ai-workflow`, `consumer`).
 
+## Prerequisites
+
+Before starting the release process, ensure you have the necessary authentication tokens.
+
+1.  **NPM Token**: The release process requires an `NPM_TOKEN` with publish permissions. You can find this in `~/Documents/env.fish` or by asking the user.
+    ```bash
+    # To export the token for the session:
+    export NPM_TOKEN=$(grep "NPM_TOKEN" ~/Documents/env.fish | awk '{print $4}')
+    ```
+
 ## Phase 1: Library Release (Root)
 
 1.  **Validation**: Ensure all tests and linting pass in the root directory.
