@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 
-if ! ( npm run build --workspace=packages && npm run lint --workspace=packages && CI=true npm run test --workspace=packages/main ) ; then
-	echo "pre-push hook failed with exit status $?"
-	exit 1
-fi
+# Git pre-commit hook to ensure code quality before committing.
+# This hook runs lint-staged for per-file checks and then full project checks.
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# 1. Lint-staged (Formatting and Linting for changed files)
+echo "📂 Running lint-staged..."
+npx lint-staged
+
+# 2. Type checking / Build (Full project)
+echo "🏗️  Running full type check..."
+npm run build
+
+# 3. Testing (Full project)
+echo "🧪 Running full tests..."
+CI=true npm run test
+
+echo "✅ All pre-commit checks passed!"

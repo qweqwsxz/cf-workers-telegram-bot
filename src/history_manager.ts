@@ -12,15 +12,11 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 * @returns array of messages
 	 */
-	async getHistory(
-		userId: number,
-		threadId?: number
-	): Promise<{ role: string; content: string }[]> {
-		if (!this.kv) {return [];}
-		const history = await this.kv.get<{ role: string; content: string }[]>(
-			this.getKey(userId, threadId),
-			'json'
-		);
+	async getHistory(userId: number, threadId?: number): Promise<{ role: string; content: string }[]> {
+		if (!this.kv) {
+			return [];
+		}
+		const history = await this.kv.get<{ role: string; content: string }[]>(this.getKey(userId, threadId), 'json');
 		return history ?? [];
 	}
 
@@ -32,13 +28,15 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 */
 	async addMessage(userId: number, prompt: string, response: string, threadId?: number) {
-		if (!this.kv) {return;}
+		if (!this.kv) {
+			return;
+		}
 		const history = await this.getHistory(userId, threadId);
 		history.push({ role: 'user', content: prompt });
 		history.push({ role: 'assistant', content: response });
 		const trimmedHistory = history.slice(-20);
 		await this.kv.put(this.getKey(userId, threadId), JSON.stringify(trimmedHistory), {
-			expirationTtl: 86400
+			expirationTtl: 86400,
 		});
 	}
 
@@ -48,7 +46,9 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 */
 	async clearHistory(userId: number, threadId?: number) {
-		if (!this.kv) {return;}
+		if (!this.kv) {
+			return;
+		}
 		await this.kv.delete(this.getKey(userId, threadId));
 	}
 }

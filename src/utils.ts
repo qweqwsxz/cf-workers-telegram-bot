@@ -27,7 +27,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 		let result = '';
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
-			const prefix = ordered ? `${(start !== '' && start !== undefined) ? Number(start) + i : i + 1}. ` : '• ';
+			const prefix = ordered ? `${start !== '' && start !== undefined ? Number(start) + i : i + 1}. ` : '• ';
 			result += `${prefix}${renderer.listitem(item)}\n`;
 		}
 		return result;
@@ -49,10 +49,10 @@ export async function markdownToHtml(s: string): Promise<string> {
 		return `<pre><code>${escapedText}</code></pre>\n`;
 	};
 	renderer.del = ({ tokens }) => `<s>${renderer.parser.parseInline(tokens)}</s>`;
-	
+
 	renderer.link = ({ href, tokens }) => `<a href="${escapeHtml(href)}">${renderer.parser.parseInline(tokens)}</a>`;
 	renderer.image = ({ href, text }) => `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
-	
+
 	renderer.blockquote = ({ tokens }) => {
 		return `<blockquote>${renderer.parser.parse(tokens)}</blockquote>\n`;
 	};
@@ -62,8 +62,21 @@ export async function markdownToHtml(s: string): Promise<string> {
 	// html tag pass-through for supported tags or escaping
 	renderer.html = ({ text }) => {
 		const allowedTags = [
-			'b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 
-			'span', 'tg-spoiler', 'a', 'code', 'pre', 'blockquote'
+			'b',
+			'strong',
+			'i',
+			'em',
+			'u',
+			'ins',
+			's',
+			'strike',
+			'del',
+			'span',
+			'tg-spoiler',
+			'a',
+			'code',
+			'pre',
+			'blockquote',
 		];
 		const match = /^<\/?([a-z0-9-]+)(?:\s+[^>]*)?>/i.exec(text);
 		if (match) {
@@ -75,7 +88,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 		// Escape everything else
 		return escapeHtml(text);
 	};
-	
+
 	renderer.text = (token) => {
 		if ('tokens' in token && token.tokens) {
 			return renderer.parser.parseInline(token.tokens);
@@ -90,7 +103,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 	});
 
 	const parsed = await marked.parse(s, { renderer });
-	
+
 	// Trim multiple newlines
 	return parsed.replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -105,34 +118,24 @@ export const fetchTool = {
 			url: { type: 'string', description: 'The URL to fetch' },
 			method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE'], default: 'GET' },
 			headers: { type: 'object', description: 'HTTP headers to include in the request' },
-			body: { type: 'string', description: 'The request body' }
+			body: { type: 'string', description: 'The request body' },
 		},
-		required: ['url']
+		required: ['url'],
 	},
-	function: async ({
-		url,
-		method,
-		headers,
-		body
-	}: {
-		url: string;
-		method?: string;
-		headers?: Record<string, string>;
-		body?: string;
-	}) => {
+	function: async ({ url, method, headers, body }: { url: string; method?: string; headers?: Record<string, string>; body?: string }) => {
 		try {
 			const res = await fetch(url, {
 				method: method || 'GET',
 				headers: {
 					'User-Agent': 'Mozilla/5.0 (Cloudflare Worker Telegram Bot)',
-					...headers
+					...headers,
 				},
-				body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined
+				body: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
 			});
 			const text = await res.text();
 			return text.slice(0, 10000);
 		} catch (e) {
 			return `Error executing fetch: ${String(e)}`;
 		}
-	}
+	},
 };

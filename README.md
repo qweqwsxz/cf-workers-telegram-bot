@@ -119,6 +119,30 @@ npx wrangler deploy
 
 To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action) or Cloudflare's built-in [GitHub integration](https://developers.cloudflare.com/workers/ci-cd/github-actions/).
 
+## Development
+
+### Setup
+
+1. **Install dependencies**:
+   ```sh
+   npm install
+   ```
+
+2. **Set up Git hooks**:
+   This project uses custom Git hooks for quality control. Run the following script to enable them:
+   ```sh
+   ./setup_hooks.sh
+   ```
+
+### Scripts
+
+- `npm run lint`: Run ESLint on the source code.
+- `npm run format`: Format the code using Prettier.
+- `npm run build`: Compile TypeScript and run type checks.
+- `npm run test`: Run unit tests with Vitest.
+
+The pre-commit hook automatically runs formatting and linting on staged files (via `lint-staged`), followed by a full project type check and tests before every commit.
+
 ## API Documentation
 
 Detailed API documentation is available at [cf-workers-telegram-bot.codebam.ca](https://cf-workers-telegram-bot.codebam.ca).
