@@ -23,7 +23,9 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.json",
 		"lint": "eslint src",
+		"lint:all": "npm run lint && npm run lint --prefix ai-workflow && npm run lint --prefix consumer && npm run lint --prefix webapp",
 		"test": "vitest --config vitest.config.js",
+		"test:all": "npm test && npm test --prefix ai-workflow && npm test --prefix consumer && npm test --prefix webapp",
 		"format": "prettier --write src test *.json *.js *.mjs",
 		"format:check": "prettier --check src test *.json *.js *.mjs",
 		"docs": "typedoc --options typedoc.json",
