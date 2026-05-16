@@ -1,8 +1,9 @@
 name: publish github package
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - '*'
 
 jobs:
   publish-github:

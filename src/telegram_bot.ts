@@ -145,6 +145,10 @@ export default class TelegramBot {
     // Then check if there's a command starting with / anywhere in the message
     const commandIndex = args.findIndex((arg) => arg.startsWith('/'));
     if (commandIndex !== -1) {
+      if (ctx.update_type === 'message' && ctx.update.message?.chat.type !== 'private') {
+        return this.defaultCommand;
+      }
+
       const fullCommand = args[commandIndex];
       const command = fullCommand.substring(
         1,
