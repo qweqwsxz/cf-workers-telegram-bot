@@ -535,13 +535,7 @@ export default class TelegramExecutionContext {
 	 * @param options - any additional options to pass to sendMessage/editMessageText
 	 * @returns Promise with the API response
 	 */
-	async streamReply(
-		message: string,
-		draft_id: number,
-		parse_mode = '',
-		options: Partial<SendMessageDraftParams> = {},
-		finish = false,
-	) {
+	async streamReply(message: string, draft_id: number, parse_mode = '', options: Partial<SendMessageDraftParams> = {}, finish = false) {
 		if (this.update_type === 'guest_message') {
 			if (finish) {
 				return await this.answerGuestQueryText(message, parse_mode);
