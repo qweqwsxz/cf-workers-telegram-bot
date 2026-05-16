@@ -76,6 +76,19 @@ export default class TelegramExecutionContext {
   }
 
   /**
+   * Check if the message sender is a bot
+   * @returns True if the sender is a bot
+   */
+  get isBot(): boolean {
+    return (
+      this.update.message?.from?.is_bot ??
+      this.update.business_message?.from?.is_bot ??
+      this.update.guest_message?.from?.is_bot ??
+      false
+    );
+  }
+
+  /**
    * Parse arguments from the update
    * @returns array of argument strings
    */
