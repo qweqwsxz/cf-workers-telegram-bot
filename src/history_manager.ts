@@ -16,7 +16,7 @@ export class HistoryManager {
 		userId: number,
 		threadId?: number
 	): Promise<{ role: string; content: string }[]> {
-		if (!this.kv) return [];
+		if (!this.kv) {return [];}
 		const history = await this.kv.get<{ role: string; content: string }[]>(
 			this.getKey(userId, threadId),
 			'json'
@@ -32,7 +32,7 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 */
 	async addMessage(userId: number, prompt: string, response: string, threadId?: number) {
-		if (!this.kv) return;
+		if (!this.kv) {return;}
 		const history = await this.getHistory(userId, threadId);
 		history.push({ role: 'user', content: prompt });
 		history.push({ role: 'assistant', content: response });
@@ -48,7 +48,7 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 */
 	async clearHistory(userId: number, threadId?: number) {
-		if (!this.kv) return;
+		if (!this.kv) {return;}
 		await this.kv.delete(this.getKey(userId, threadId));
 	}
 }
