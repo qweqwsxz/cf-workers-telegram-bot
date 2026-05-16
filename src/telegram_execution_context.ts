@@ -24,8 +24,6 @@ export default class TelegramExecutionContext {
   private static businessOwners = new Map<string, number>();
   /** Cache for dead business connections */
   private static poisonedConnections = new Set<string>();
-  /** Cache for self-response counts to prevent infinite loops */
-  private static selfResponseCount = new Map<string, number>();
 
   /** an instance of the telegram bot */
   bot: TelegramBot;
@@ -116,16 +114,6 @@ export default class TelegramExecutionContext {
    */
   public async shouldProcess(): Promise<boolean> {
     if (this.update_type !== 'business_message') {
-      if (this.userId === this.bot.botId) {
-        const chatId = this.getChatId();
-        const count = TelegramExecutionContext.selfResponseCount.get(chatId) || 0;
-        if (count < this.bot.ttl) {
-          TelegramExecutionContext.selfResponseCount.set(chatId, count + 1);
-          return true;
-        }
-        return false;
-      }
-      TelegramExecutionContext.selfResponseCount.delete(this.getChatId());
       return true;
     }
 
@@ -166,17 +154,6 @@ export default class TelegramExecutionContext {
       }
     }
 
-    if (ownerId !== undefined && (this.getChatId() === ownerId.toString() || this.userId === ownerId)) {
-      const chatId = this.getChatId();
-      const count = TelegramExecutionContext.selfResponseCount.get(chatId) || 0;
-      if (count < this.bot.ttl) {
-        TelegramExecutionContext.selfResponseCount.set(chatId, count + 1);
-        return true;
-      }
-      return false;
-    }
-
-    TelegramExecutionContext.selfResponseCount.delete(this.getChatId());
     return true;
   }
 
