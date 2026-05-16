@@ -21,15 +21,18 @@
         in
         {
           default = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              efm-langserver
-              nil
-              nodejs_latest
-              typescript-language-server
-              prettier
-              vscode-langservers-extracted
-            ];
+          	buildInputs = with pkgs; [
+          		efm-langserver
+          		nil
+          		nodejs_latest
+          		typescript-language-server
+          		prettier
+          		vscode-langservers-extracted
+          		nixfmt-rfc-style
+          		jq
+          	];
           };
+
         }
       );
     };

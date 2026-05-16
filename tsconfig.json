@@ -1,11 +1,15 @@
 {
-	"include": ["src/**/*", "worker-configuration.d.ts"],
+	"include": ["src/**/*", "worker-configuration.d.ts", "test/**/*"],
 	"compilerOptions": {
 		"strict": true,
 		"target": "esnext",
 		"module": "esnext",
 		"lib": ["esnext"],
-		"types": ["node", "./worker-configuration.d.ts"],
+		"types": [
+			"node",
+			"./worker-configuration.d.ts",
+			"@cloudflare/vitest-pool-workers"
+		],
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"moduleResolution": "bundler",
