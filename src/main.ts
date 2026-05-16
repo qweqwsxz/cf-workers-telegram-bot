@@ -48,6 +48,7 @@ import TelegramInlineQueryType from './types/TelegramInlineQueryType.js';
 
 import { markdownToHtml, fetchTool } from './utils.js';
 import { HistoryManager, getBalance } from './history_manager.js';
+import { extractText, customRunWithTools, streamAiResponseToTelegram, createMockTelegramExecutionContext } from './ai.js';
 
 export default TelegramBot;
 export {
@@ -97,4 +98,8 @@ export {
 	fetchTool,
 	HistoryManager,
 	getBalance,
+	extractText,
+	customRunWithTools,
+	streamAiResponseToTelegram,
+	createMockTelegramExecutionContext,
 };

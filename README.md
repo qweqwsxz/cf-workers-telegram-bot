@@ -119,7 +119,24 @@ npx wrangler deploy
 
 To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action) or Cloudflare's built-in [GitHub integration](https://developers.cloudflare.com/workers/ci-cd/github-actions/).
 
+## Structure
+
+This is a monorepo containing:
+- Root: Core library `@codebam/cf-workers-telegram-bot`
+- `ai-workflow`: A Cloudflare Workflow for handling long-running AI tasks
+- `webapp`: A Svelte 5 web application for interacting with the bot
+- `consumer`: A minimal consumer of the library
+
 ## Development
+
+You can use the root `Makefile` to run common tasks across all projects:
+
+```sh
+make build   # Build all projects
+make test    # Run tests for all projects
+make lint    # Lint all projects
+make format  # Format all projects
+```
 
 ### Setup
 
