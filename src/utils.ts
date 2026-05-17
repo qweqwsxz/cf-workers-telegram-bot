@@ -140,10 +140,9 @@ export const fetchTool = {
 	},
 };
 
-export const searchTool = {
-	name: 'search',
-	description:
-		'Perform a web search using the SearXNG search engine to look up answers, facts, news, and find information from different websites.',
+export const wikipediaTool = {
+	name: 'wikipedia',
+	description: 'Perform a search on Wikipedia to look up answers, facts, and find information.',
 	parameters: {
 		type: 'object',
 		properties: {
@@ -153,88 +152,8 @@ export const searchTool = {
 	},
 	function: async (args: { query?: string; q?: string }) => {
 		const query = args.query || args.q || '';
-		const instances = [
-			'https://searxng.site/',
-			'https://priv.au/',
-			'https://search.mdosch.de/',
-			'https://ooglester.com/',
-			'https://copp.gg/',
-			'https://baresearch.org/',
-		];
-
 		const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-		for (const instance of instances) {
-			try {
-				const url = `${instance}search?q=${encodeURIComponent(query)}&format=json`;
-				const res = await fetch(url, {
-					method: 'GET',
-					headers: {
-						'User-Agent': userAgent,
-						Accept: 'application/json',
-					},
-				});
-				if (res.status === 200) {
-					const text = await res.text();
-					const parsed = JSON.parse(text);
-					if (parsed && Array.isArray(parsed.results) && parsed.results.length > 0) {
-						return text.slice(0, 15000);
-					}
-				}
-			} catch {
-				// Continue to next fallback
-			}
-		}
-
-		// Fallback to DuckDuckGo Lite Search
-		try {
-			const ddgUrl = 'https://lite.duckduckgo.com/lite/';
-			const ddgRes = await fetch(ddgUrl, {
-				method: 'POST',
-				headers: {
-					'User-Agent': userAgent,
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Accept: 'text/html',
-				},
-				body: `q=${encodeURIComponent(query)}`,
-			});
-
-			if (ddgRes.status === 200 || ddgRes.status === 202) {
-				const html = await ddgRes.text();
-				const cleanHtml = (str: string) =>
-					str
-						.replace(/<[^>]*>/g, '')
-						.replace(/&nbsp;/g, ' ')
-						.replace(/\s+/g, ' ')
-						.trim();
-
-				const links: Array<{ url: string; title: string }> = [];
-				const linkRegex = /<a[^>]*class='result-link'[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
-				let match;
-				while ((match = linkRegex.exec(html)) !== null) {
-					links.push({ url: match[1], title: cleanHtml(match[2]) });
-				}
-
-				const snippets: string[] = [];
-				const snippetRegex = /<td[^>]*class='result-snippet'[^>]*>([\s\S]*?)<\/td>/g;
-				while ((match = snippetRegex.exec(html)) !== null) {
-					snippets.push(cleanHtml(match[1]));
-				}
-
-				if (links.length > 0) {
-					const results = links.map((link, i) => ({
-						title: link.title,
-						url: link.url,
-						snippet: snippets[i] || '',
-					}));
-					return JSON.stringify({ results });
-				}
-			}
-		} catch {
-			// Continue to next fallback
-		}
-
-		// Fallback to Wikipedia Search if DuckDuckGo Lite is blocked/rate-limited
 		try {
 			const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json`;
 			const res = await fetch(wikiUrl, {
@@ -260,43 +179,10 @@ export const searchTool = {
 					}
 				}
 			}
-		} catch {
-			// Continue to next fallback
+		} catch (e) {
+			return `Error executing Wikipedia search: ${String(e)}`;
 		}
 
-		// Final fallback to Google News RSS search for recent general web/news results
-		try {
-			const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-			const res = await fetch(googleNewsUrl, {
-				headers: { 'User-Agent': userAgent },
-			});
-			if (res.status === 200) {
-				const xml = await res.text();
-				const items: Array<{ title: string; url: string; snippet: string }> = [];
-				const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-				let match;
-				while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
-					const content = match[1];
-					const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(content);
-					const linkMatch = /<link>([\s\S]*?)<\/link>/.exec(content);
-					const descMatch = /<description>([\s\S]*?)<\/description>/.exec(content);
-
-					const title = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') : '';
-					const link = linkMatch ? linkMatch[1] : '';
-					const desc = descMatch ? descMatch[1].replace(/<[^>]*>/g, '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') : '';
-
-					if (title && link) {
-						items.push({ title, url: link, snippet: desc });
-					}
-				}
-				if (items.length > 0) {
-					return JSON.stringify({ results: items });
-				}
-			}
-		} catch {
-			// Continue
-		}
-
-		return 'Error executing search: All public search instances, Wikipedia fallback, and Google News fallback returned no results.';
+		return 'Error executing Wikipedia search: No results found.';
 	},
 };
