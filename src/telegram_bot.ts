@@ -152,6 +152,16 @@ export default class TelegramBot {
 
 			const fullCommand = args[commandIndex];
 			const command = fullCommand.substring(1, fullCommand.lastIndexOf('@') > -1 ? fullCommand.lastIndexOf('@') : fullCommand.length);
+
+			if (ctx.update_type === 'business_message') {
+				const isOwner = ctx.update.business_message?.from?.id !== ctx.update.business_message?.chat?.id;
+				if (command === 'clear' && isOwner) {
+					ctx.args = args.slice(commandIndex);
+					return command;
+				}
+				return this.defaultCommand;
+			}
+
 			if (command in this.commands) {
 				// Shift args so the command handler sees the command at index 0
 				ctx.args = args.slice(commandIndex);

@@ -194,4 +194,89 @@ describe('telegram bot', () => {
 
 		globalThis.fetch = originalFetch;
 	});
+
+	it('business message with command from customer should bypass to default handler', async () => {
+		const messageHandler = vi.fn().mockResolvedValue(new Response('message_called'));
+		const startHandler = vi.fn().mockResolvedValue(new Response('start_called'));
+		const bot = new TelegramBot('123456789').on(':message', messageHandler).command('start', startHandler);
+
+		const ownerId = 999;
+		const userId = 123;
+		const originalFetch = globalThis.fetch;
+
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					ok: true,
+					result: {
+						user: { id: ownerId },
+						can_reply: true,
+					},
+				}),
+				{ status: 200 },
+			),
+		);
+
+		const request = new Request('http://example.com/123456789', {
+			method: 'POST',
+			body: JSON.stringify({
+				business_message: {
+					business_connection_id: 'conn111',
+					from: { id: userId },
+					chat: { id: userId, type: 'private' },
+					text: '/start',
+					message_id: 3,
+				},
+			}),
+		});
+
+		const response = await bot.handle(request);
+		expect(await response.text()).toBe('message_called');
+		expect(messageHandler).toHaveBeenCalled();
+		expect(startHandler).not.toHaveBeenCalled();
+
+		globalThis.fetch = originalFetch;
+	});
+
+	it('business message clear command from owner should be routed to clear handler', async () => {
+		const messageHandler = vi.fn().mockResolvedValue(new Response('message_called'));
+		const clearHandler = vi.fn().mockResolvedValue(new Response('clear_called'));
+		const bot = new TelegramBot('123456789').on(':message', messageHandler).command('clear', clearHandler);
+
+		const ownerId = 999;
+		const originalFetch = globalThis.fetch;
+
+		globalThis.fetch = vi.fn().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					ok: true,
+					result: {
+						user: { id: ownerId },
+						can_reply: true,
+					},
+				}),
+				{ status: 200 },
+			),
+		);
+
+		const request = new Request('http://example.com/123456789', {
+			method: 'POST',
+			body: JSON.stringify({
+				business_message: {
+					business_connection_id: 'conn222',
+					from: { id: ownerId },
+					chat: { id: 123, type: 'private' },
+					text: '/clear',
+					message_id: 4,
+				},
+			}),
+		});
+
+		const response = await bot.handle(request);
+		expect(await response.text()).toBe('clear_called');
+		expect(clearHandler).toHaveBeenCalled();
+		expect(messageHandler).not.toHaveBeenCalled();
+
+		globalThis.fetch = originalFetch;
+	});
 });
