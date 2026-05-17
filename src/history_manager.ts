@@ -2,7 +2,7 @@
 export class HistoryManager {
 	constructor(private kv: KVNamespace) {}
 
-	private getKey(userId: number, threadId?: number): string {
+	private getKey(userId: number | string, threadId?: number): string {
 		return threadId ? `history:${String(userId)}:${String(threadId)}` : `history:${String(userId)}`;
 	}
 
@@ -12,7 +12,7 @@ export class HistoryManager {
 	 * @param threadId - optional thread ID
 	 * @returns array of messages
 	 */
-	async getHistory(userId: number, threadId?: number): Promise<{ role: string; content: string }[]> {
+	async getHistory(userId: number | string, threadId?: number): Promise<{ role: string; content: string }[]> {
 		if (!this.kv) {
 			return [];
 		}
@@ -27,7 +27,7 @@ export class HistoryManager {
 	 * @param response - the bot response
 	 * @param threadId - optional thread ID
 	 */
-	async addMessage(userId: number, prompt: string, response: string, threadId?: number) {
+	async addMessage(userId: number | string, prompt: string, response: string, threadId?: number) {
 		if (!this.kv) {
 			return;
 		}
@@ -45,7 +45,7 @@ export class HistoryManager {
 	 * @param userId - the telegram user ID
 	 * @param threadId - optional thread ID
 	 */
-	async clearHistory(userId: number, threadId?: number) {
+	async clearHistory(userId: number | string, threadId?: number) {
 		if (!this.kv) {
 			return;
 		}
