@@ -186,7 +186,55 @@ export const searchTool = {
 			}
 		}
 
-		// Fallback to Wikipedia Search if all SearXNG instances fail/are rate-limited
+		// Fallback to DuckDuckGo Lite Search
+		try {
+			const ddgUrl = 'https://lite.duckduckgo.com/lite/';
+			const ddgRes = await fetch(ddgUrl, {
+				method: 'POST',
+				headers: {
+					'User-Agent': userAgent,
+					'Content-Type': 'application/x-www-form-urlencoded',
+					Accept: 'text/html',
+				},
+				body: `q=${encodeURIComponent(query)}`,
+			});
+
+			if (ddgRes.status === 200 || ddgRes.status === 202) {
+				const html = await ddgRes.text();
+				const cleanHtml = (str: string) =>
+					str
+						.replace(/<[^>]*>/g, '')
+						.replace(/&nbsp;/g, ' ')
+						.replace(/\s+/g, ' ')
+						.trim();
+
+				const links: Array<{ url: string; title: string }> = [];
+				const linkRegex = /<a[^>]*class='result-link'[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
+				let match;
+				while ((match = linkRegex.exec(html)) !== null) {
+					links.push({ url: match[1], title: cleanHtml(match[2]) });
+				}
+
+				const snippets: string[] = [];
+				const snippetRegex = /<td[^>]*class='result-snippet'[^>]*>([\s\S]*?)<\/td>/g;
+				while ((match = snippetRegex.exec(html)) !== null) {
+					snippets.push(cleanHtml(match[1]));
+				}
+
+				if (links.length > 0) {
+					const results = links.map((link, i) => ({
+						title: link.title,
+						url: link.url,
+						snippet: snippets[i] || '',
+					}));
+					return JSON.stringify({ results });
+				}
+			}
+		} catch {
+			// Continue to next fallback
+		}
+
+		// Fallback to Wikipedia Search if DuckDuckGo Lite is blocked/rate-limited
 		try {
 			const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json`;
 			const res = await fetch(wikiUrl, {
