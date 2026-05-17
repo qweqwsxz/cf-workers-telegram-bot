@@ -139,3 +139,38 @@ export const fetchTool = {
 		}
 	},
 };
+
+export const searchTool = {
+	name: 'search',
+	description:
+		'Perform a web search using the SearXNG search engine to look up answers, facts, news, and find information from different websites.',
+	parameters: {
+		type: 'object',
+		properties: {
+			query: { type: 'string', description: 'The search query to search for' },
+		},
+		required: ['query'],
+	},
+	function: async ({ query }: { query: string }) => {
+		try {
+			const url = `https://searxng.p.rapidapi.com/search?q=${encodeURIComponent(query)}&categories=general&engines=google%2Cbing&language=auto&pageno=1&format=json&results_on_new_tab=0&image_proxy=true&safesearch=0`;
+			const res = await fetch(url, {
+				method: 'POST',
+				headers: {
+					'x-rapidapi-key': '4c2f1bba03msh767a933cd87b87ep18bd39jsnc2eb23fa9f5d',
+					'x-rapidapi-host': 'searxng.p.rapidapi.com',
+					'Content-Type': 'application/json',
+					'User-Agent': 'Mozilla/5.0 (Cloudflare Worker Telegram Bot)',
+				},
+				body: JSON.stringify({
+					key1: 'value',
+					key2: 'value',
+				}),
+			});
+			const text = await res.text();
+			return text.slice(0, 15000);
+		} catch (e) {
+			return `Error executing search: ${String(e)}`;
+		}
+	},
+};

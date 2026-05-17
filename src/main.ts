@@ -46,7 +46,7 @@ import TelegramGuestMessage from './types/TelegramGuestMessage.js';
 import PartialTelegramUpdate from './types/PartialTelegramUpdate.js';
 import TelegramInlineQueryType from './types/TelegramInlineQueryType.js';
 
-import { markdownToHtml, fetchTool } from './utils.js';
+import { markdownToHtml, fetchTool, searchTool } from './utils.js';
 import { HistoryManager, getBalance } from './history_manager.js';
 export { extractText, customRunWithTools, streamAiResponseToTelegram, createMockTelegramExecutionContext } from './ai.js';
 
@@ -96,6 +96,7 @@ export {
 	TelegramSuccessfulPayment,
 	markdownToHtml,
 	fetchTool,
+	searchTool,
 	HistoryManager,
 	getBalance,
 };
