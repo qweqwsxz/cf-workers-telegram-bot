@@ -135,7 +135,8 @@ export default class TelegramBot {
 				// For guest messages, we fall through to command detection if it's not a special type
 				break;
 			case 'business_message':
-				return this.defaultCommand;
+				// For business messages, we fall through to command detection if it's not a special type
+				break;
 			case 'pre_checkout_query':
 				return ':pre_checkout_query' in this.commands ? ':pre_checkout_query' : this.defaultCommand;
 			case 'successful_payment':
