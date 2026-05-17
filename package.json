@@ -29,7 +29,7 @@
 		"test:all": "npm test && npm test --prefix ai-workflow && npm test --prefix consumer && npm test --prefix webapp",
 		"format": "prettier --write src test *.json *.js *.mjs",
 		"format:check": "prettier --check src test *.json *.js *.mjs",
-		"docs": "typedoc --options typedoc.json",
+		"docs": "typedoc --options typedoc.json && node fix-docs.js",
 		"deploy:docs": "npm run docs && wrangler pages deploy docs",
 		"ncu": "npx npm-check-updates -u --root",
 		"ncu:interactive": "npx npm-check-updates -i --root",
