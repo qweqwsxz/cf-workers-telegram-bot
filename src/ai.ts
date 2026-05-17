@@ -241,8 +241,8 @@ export async function streamAiResponseToTelegram(
 	// Use updateId as a stable draftId if available, otherwise generate one
 	const draftId = task.updateId || Date.now();
 
-	// Skip Thinking message for guest messages as they only support one response
-	if (task.updateType !== 'guest_message') {
+	// Skip Thinking message for guest messages and business messages as they only support one response or don't support drafts
+	if (task.updateType !== 'guest_message' && task.updateType !== 'business_message') {
 		await botApi.sendMessageDraft(`https://api.telegram.org/bot${task.telegramToken || task.token}`, {
 			chat_id: task.chatId,
 			text: 'Thinking...',
@@ -298,7 +298,12 @@ export async function streamAiResponseToTelegram(
 				}
 
 				// Update Telegram every 2 seconds to avoid rate limits
-				if (task.updateType !== 'guest_message' && Date.now() - lastUpdate > 2000 && streamContent.trim()) {
+				if (
+					task.updateType !== 'guest_message' &&
+					task.updateType !== 'business_message' &&
+					Date.now() - lastUpdate > 2000 &&
+					streamContent.trim()
+				) {
 					const currentContent = streamContent;
 					bot
 						.streamReply(await markdownToHtml(currentContent + '...'), draftId, 'HTML')
@@ -354,16 +359,27 @@ export function createMockTelegramExecutionContext(task: Record<string, unknown>
 		},
 		streamReply: async (text: string, draft_id: number, parse_mode = '', options: Record<string, unknown> = {}, finish = false) => {
 			const api = new TelegramApi();
-			if (task.updateType === 'guest_message' && task.guestQueryId) {
+			if (task.updateType === 'guest_message' || task.updateType === 'business_message') {
 				if (finish) {
-					return await api.answerGuestQuery(`https://api.telegram.org/bot${(task.telegramToken as string) || (task.token as string)}`, {
-						guest_query_id: task.guestQueryId as string,
-						result: {
-							type: 'article',
-							id: crypto.randomUUID(),
-							title: 'Response',
-							input_message_content: { message_text: text, parse_mode: (parse_mode || 'HTML') as ParseMode },
-						},
+					if (task.updateType === 'guest_message' && task.guestQueryId) {
+						return await api.answerGuestQuery(`https://api.telegram.org/bot${(task.telegramToken as string) || (task.token as string)}`, {
+							guest_query_id: task.guestQueryId as string,
+							result: {
+								type: 'article',
+								id: crypto.randomUUID(),
+								title: 'Response',
+								input_message_content: { message_text: text, parse_mode: (parse_mode || 'HTML') as ParseMode },
+							},
+						});
+					}
+					return await api.sendMessage(`https://api.telegram.org/bot${(task.telegramToken as string) || (task.token as string)}`, {
+						chat_id: task.chatId as string | number,
+						text,
+						parse_mode: (parse_mode || 'HTML') as ParseMode,
+						reply_markup: options.reply_markup as object,
+						message_thread_id: task.threadId as number,
+						business_connection_id: task.businessConnectionId as string | number,
+						reply_to_message_id: task.messageId as string | number,
 					});
 				}
 				return null;

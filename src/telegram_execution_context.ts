@@ -536,9 +536,9 @@ export default class TelegramExecutionContext {
 	 * @returns Promise with the API response
 	 */
 	async streamReply(message: string, draft_id: number, parse_mode = '', options: Partial<SendMessageDraftParams> = {}, finish = false) {
-		if (this.update_type === 'guest_message') {
+		if (this.update_type === 'guest_message' || this.update_type === 'business_message') {
 			if (finish) {
-				return await this.answerGuestQueryText(message, parse_mode);
+				return await this.reply(message, parse_mode, true, options as unknown as Partial<SendMessageParams>);
 			}
 			return null;
 		}
