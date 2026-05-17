@@ -152,25 +152,67 @@ export const searchTool = {
 		required: ['query'],
 	},
 	function: async ({ query }: { query: string }) => {
-		try {
-			const url = `https://searxng.p.rapidapi.com/search?q=${encodeURIComponent(query)}&categories=general&engines=google%2Cbing&language=auto&pageno=1&format=json&results_on_new_tab=0&image_proxy=true&safesearch=0`;
-			const res = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'x-rapidapi-key': '4c2f1bba03msh767a933cd87b87ep18bd39jsnc2eb23fa9f5d',
-					'x-rapidapi-host': 'searxng.p.rapidapi.com',
-					'Content-Type': 'application/json',
-					'User-Agent': 'Mozilla/5.0 (Cloudflare Worker Telegram Bot)',
-				},
-				body: JSON.stringify({
-					key1: 'value',
-					key2: 'value',
-				}),
-			});
-			const text = await res.text();
-			return text.slice(0, 15000);
-		} catch (e) {
-			return `Error executing search: ${String(e)}`;
+		const instances = [
+			'https://searxng.site/',
+			'https://priv.au/',
+			'https://search.mdosch.de/',
+			'https://ooglester.com/',
+			'https://copp.gg/',
+			'https://baresearch.org/',
+		];
+
+		const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+		for (const instance of instances) {
+			try {
+				const url = `${instance}search?q=${encodeURIComponent(query)}&format=json`;
+				const res = await fetch(url, {
+					method: 'GET',
+					headers: {
+						'User-Agent': userAgent,
+						Accept: 'application/json',
+					},
+				});
+				if (res.status === 200) {
+					const text = await res.text();
+					const parsed = JSON.parse(text);
+					if (parsed && Array.isArray(parsed.results) && parsed.results.length > 0) {
+						return text.slice(0, 15000);
+					}
+				}
+			} catch {
+				// Continue to next fallback
+			}
 		}
+
+		// Final fallback to Wikipedia Search if all SearXNG instances fail/are rate-limited
+		try {
+			const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json`;
+			const res = await fetch(wikiUrl, {
+				headers: { 'User-Agent': userAgent },
+			});
+			if (res.status === 200) {
+				const data = (await res.json()) as {
+					query?: {
+						search?: Array<{
+							title: string;
+							snippet: string;
+						}>;
+					};
+				};
+				if (data && data.query && Array.isArray(data.query.search)) {
+					const results = data.query.search.map((item) => ({
+						title: item.title,
+						snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ''), // strip HTML tags
+						url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
+					}));
+					return JSON.stringify({ results });
+				}
+			}
+		} catch (e) {
+			return `Error executing search: All public search instances and Wikipedia fallback failed. Error: ${String(e)}`;
+		}
+
+		return 'Error executing search: All public search instances and Wikipedia fallback returned no results.';
 	},
 };
