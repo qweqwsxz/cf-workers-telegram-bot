@@ -279,4 +279,50 @@ describe('telegram bot', () => {
 
 		globalThis.fetch = originalFetch;
 	});
+
+	it('pre_checkout_query should trigger correct handler and call answerPreCheckoutQuery', async () => {
+		const preCheckoutHandler = vi.fn().mockImplementation(async (bot) => {
+			await bot.answerPreCheckoutQuery(true);
+			return new Response('checkout_handled');
+		});
+		const bot = new TelegramBot('123456789').on(':pre_checkout_query', preCheckoutHandler);
+
+		const originalFetch = globalThis.fetch;
+		const mockFetch = vi.fn().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					ok: true,
+					result: true,
+				}),
+				{ status: 200 },
+			),
+		);
+		globalThis.fetch = mockFetch;
+
+		const request = new Request('http://example.com/123456789', {
+			method: 'POST',
+			body: JSON.stringify({
+				pre_checkout_query: {
+					id: '987654321',
+					from: { id: 123, is_bot: false, first_name: 'Sean' },
+					currency: 'XTR',
+					total_amount: 100,
+					invoice_payload: 'load:100',
+				},
+			}),
+		});
+
+		const response = await bot.handle(request);
+		expect(await response.text()).toBe('checkout_handled');
+		expect(preCheckoutHandler).toHaveBeenCalled();
+
+		expect(mockFetch).toHaveBeenCalled();
+		const fetchCallUrl = mockFetch.mock.calls[0][0] as Request;
+		expect(fetchCallUrl.url).toContain('answerPreCheckoutQuery');
+		const requestBody = (await fetchCallUrl.json()) as { pre_checkout_query_id: string; ok: boolean };
+		expect(requestBody.pre_checkout_query_id).toBe('987654321');
+		expect(requestBody.ok).toBe(true);
+
+		globalThis.fetch = originalFetch;
+	});
 });

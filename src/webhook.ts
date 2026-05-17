@@ -39,7 +39,16 @@ export default class Webhook {
 		const params: Record<string, string> = {
 			url: this.webhook.toString(),
 			max_connections: '40',
-			allowed_updates: JSON.stringify(['message', 'inline_query', 'guest_message', 'business_message', 'business_connection']),
+			allowed_updates: JSON.stringify([
+				'message',
+				'edited_message',
+				'callback_query',
+				'inline_query',
+				'guest_message',
+				'business_message',
+				'business_connection',
+				'pre_checkout_query',
+			]),
 			drop_pending_updates: 'true',
 		};
 
