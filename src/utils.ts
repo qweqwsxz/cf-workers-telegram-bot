@@ -185,7 +185,7 @@ export const searchTool = {
 			}
 		}
 
-		// Final fallback to Wikipedia Search if all SearXNG instances fail/are rate-limited
+		// Fallback to Wikipedia Search if all SearXNG instances fail/are rate-limited
 		try {
 			const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json`;
 			const res = await fetch(wikiUrl, {
@@ -201,18 +201,53 @@ export const searchTool = {
 					};
 				};
 				if (data && data.query && Array.isArray(data.query.search)) {
-					const results = data.query.search.map((item) => ({
+					const wikiResults = data.query.search.map((item) => ({
 						title: item.title,
 						snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ''), // strip HTML tags
 						url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
 					}));
-					return JSON.stringify({ results });
+					if (wikiResults.length > 0) {
+						return JSON.stringify({ results: wikiResults });
+					}
 				}
 			}
-		} catch (e) {
-			return `Error executing search: All public search instances and Wikipedia fallback failed. Error: ${String(e)}`;
+		} catch {
+			// Continue to next fallback
 		}
 
-		return 'Error executing search: All public search instances and Wikipedia fallback returned no results.';
+		// Final fallback to Google News RSS search for recent general web/news results
+		try {
+			const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+			const res = await fetch(googleNewsUrl, {
+				headers: { 'User-Agent': userAgent },
+			});
+			if (res.status === 200) {
+				const xml = await res.text();
+				const items: Array<{ title: string; url: string; snippet: string }> = [];
+				const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+				let match;
+				while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+					const content = match[1];
+					const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(content);
+					const linkMatch = /<link>([\s\S]*?)<\/link>/.exec(content);
+					const descMatch = /<description>([\s\S]*?)<\/description>/.exec(content);
+
+					const title = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') : '';
+					const link = linkMatch ? linkMatch[1] : '';
+					const desc = descMatch ? descMatch[1].replace(/<[^>]*>/g, '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') : '';
+
+					if (title && link) {
+						items.push({ title, url: link, snippet: desc });
+					}
+				}
+				if (items.length > 0) {
+					return JSON.stringify({ results: items });
+				}
+			}
+		} catch {
+			// Continue
+		}
+
+		return 'Error executing search: All public search instances, Wikipedia fallback, and Google News fallback returned no results.';
 	},
 };
