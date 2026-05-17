@@ -153,7 +153,6 @@ export const searchTool = {
 	},
 	function: async ({ query }: { query: string }) => {
 		const instances = [
-			'http://localhost:8081/',
 			'https://searxng.site/',
 			'https://priv.au/',
 			'https://search.mdosch.de/',
