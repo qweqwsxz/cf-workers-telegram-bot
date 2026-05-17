@@ -151,7 +151,8 @@ export const searchTool = {
 		},
 		required: ['query'],
 	},
-	function: async ({ query }: { query: string }) => {
+	function: async (args: { query?: string; q?: string }) => {
+		const query = args.query || args.q || '';
 		const instances = [
 			'https://searxng.site/',
 			'https://priv.au/',

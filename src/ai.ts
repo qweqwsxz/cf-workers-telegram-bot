@@ -92,7 +92,7 @@ export async function customRunWithTools(
 			})
 			.join('\n');
 
-		const promptInstruction = `\n\n[SYSTEM INSTRUCTION] You have access to the following tools:\n${toolInstructions}\n\nTo use a tool, you MUST output a tool call wrapped in XML format, like so:\n<tool_call>{"name": "search", "arguments": {"q": "query" }}</tool_call>\nor\n<tool_call>{"name": "fetch", "arguments": {"url": "https://example.com" }}</tool_call>\n\nMake sure the tool call is outputted EXACTLY as shown. The system will intercept this call, execute the tool, and return the output to you. Do not write code or direct the user to run code; call the tools yourself.`;
+		const promptInstruction = `\n\n[SYSTEM INSTRUCTION] You have access to the following tools:\n${toolInstructions}\n\nTo use a tool, you MUST output a tool call wrapped in XML format, like so:\n<tool_call>{"name": "search", "arguments": {"query": "query" }}</tool_call>\nor\n<tool_call>{"name": "fetch", "arguments": {"url": "https://example.com" }}</tool_call>\n\nMake sure the tool call is outputted EXACTLY as shown. The system will intercept this call, execute the tool, and return the output to you. Do not write code or direct the user to run code; call the tools yourself.`;
 
 		systemMsg.content = systemMsg.content + promptInstruction;
 	}
