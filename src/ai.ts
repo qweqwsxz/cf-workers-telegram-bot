@@ -78,6 +78,25 @@ export async function customRunWithTools(
 		},
 	}));
 
+	// Inject instructions if tools are provided
+	if (tools.length > 0) {
+		let systemMsg = messages.find((m) => m.role === 'system');
+		if (!systemMsg) {
+			systemMsg = { role: 'system', content: '' };
+			messages.unshift(systemMsg);
+		}
+		const toolInstructions = tools
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			.map((t: any) => {
+				return `- Name: ${t.name}\n  Description: ${t.description}\n  Parameters: ${JSON.stringify(t.parameters)}`;
+			})
+			.join('\n');
+
+		const promptInstruction = `\n\n[SYSTEM INSTRUCTION] You have access to the following tools:\n${toolInstructions}\n\nTo use a tool, you MUST output a tool call wrapped in XML format, like so:\n<tool_call>{"name": "search", "arguments": {"q": "query" }}</tool_call>\nor\n<tool_call>{"name": "fetch", "arguments": {"url": "https://example.com" }}</tool_call>\n\nMake sure the tool call is outputted EXACTLY as shown. The system will intercept this call, execute the tool, and return the output to you. Do not write code or direct the user to run code; call the tools yourself.`;
+
+		systemMsg.content = systemMsg.content + promptInstruction;
+	}
+
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const runModel = async (msgs: any[], stream: boolean) => {
 		if (isGemini) {
@@ -100,7 +119,7 @@ export async function customRunWithTools(
 		return await ai.run(model, { messages: msgs, tools: cfTools.length > 0 ? cfTools : undefined, stream });
 	};
 
-	if (cfTools.length === 0 || isGemini) {
+	if (cfTools.length === 0) {
 		return await runModel(messages, config.streamFinalResponse);
 	}
 
