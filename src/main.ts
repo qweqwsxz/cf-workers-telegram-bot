@@ -46,7 +46,7 @@ import TelegramGuestMessage from './types/TelegramGuestMessage.js';
 import PartialTelegramUpdate from './types/PartialTelegramUpdate.js';
 import TelegramInlineQueryType from './types/TelegramInlineQueryType.js';
 
-import { markdownToHtml, fetchTool, wikipediaTool } from './utils.js';
+import { markdownToHtml, fetchTool, wikipediaTool, createTavilySearchTool } from './utils.js';
 import { HistoryManager, getBalance } from './history_manager.js';
 export { extractText, customRunWithTools, streamAiResponseToTelegram, createMockTelegramExecutionContext } from './ai.js';
 
@@ -97,6 +97,7 @@ export {
 	markdownToHtml,
 	fetchTool,
 	wikipediaTool,
+	createTavilySearchTool,
 	HistoryManager,
 	getBalance,
 };
