@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 MODELS=(
   "@hf/nousresearch/hermes-2-pro-mistral-7b"
-  "@cf/google/gemma-4-26b-a4b-it"
   "google/gemini-3-flash"
   "google/gemini-3.1-flash-lite"
   "google/gemini-3.1-pro"
   "@cf/moonshotai/kimi-k2.6"
   "@cf/zai-org/glm-4.7-flash"
-  "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
   "@cf/nvidia/nemotron-3-120b-a12b"
 )
 
@@ -25,6 +23,6 @@ for MODEL in "${MODELS[@]}"; do
       \"prompt\": \"$PROMPT\",
       \"modelId\": \"$MODEL\",
       \"stream\": false
-    }" | jq .
+    }" | (jq . || cat)
   echo "----------------------------------------"
 done
