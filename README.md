@@ -21,7 +21,6 @@ A monorepo containing a Telegram Bot and a Svelte web application, both running 
 This is a monorepo containing:
 - `bot`: The main Telegram Bot built with [grammY](https://grammy.dev/)
 - `webapp`: A Svelte 5 web application for interacting with the bot
-- `consumer`: A minimal consumer template
 
 ## Deployment
 

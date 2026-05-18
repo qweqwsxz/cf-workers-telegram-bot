@@ -17,14 +17,6 @@ updates:
     versioning-strategy: increase
 
   - package-ecosystem: "npm"
-    directory: "/consumer"
-    schedule:
-      interval: "weekly"
-    allow:
-      - dependency-type: "all"
-    versioning-strategy: increase
-
-  - package-ecosystem: "npm"
     directory: "/webapp"
     schedule:
       interval: "weekly"
