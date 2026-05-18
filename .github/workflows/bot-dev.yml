@@ -9,6 +9,7 @@ on:
       - 'bot/**'
       - 'packages/shared/**'
       - '.github/workflows/bot-dev.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:

@@ -9,6 +9,7 @@ on:
       - 'webapp/**'
       - 'packages/shared/**'
       - '.github/workflows/webapp-dev.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
