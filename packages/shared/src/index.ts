@@ -236,6 +236,13 @@ export interface Environment {
 	TAVILY_API_KEY?: string;
 }
 
+export interface Tool {
+	name: string;
+	description: string;
+	parameters: Record<string, any>;
+	function: (args: any) => Promise<any>;
+}
+
 export interface Task {
 	type: 'code' | 'message' | 'business_message' | 'photo' | 'gen_photo' | 'voice' | 'tool_call';
 	updateId?: number;
@@ -253,6 +260,7 @@ export interface Task {
 	fileId?: string;
 	systemPrompt?: string;
 	telegramToken?: string;
+	token?: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	tools?: any[];
 	stream?: boolean;
@@ -261,7 +269,7 @@ export interface Task {
 export interface AiResponse {
 	choices?: {
 		delta?: { content?: string };
-		message?: { content?: string };
+		message?: { content?: string; tool_calls?: any[] };
 		tool_calls?: any[];
 	}[];
 	response?: string;
