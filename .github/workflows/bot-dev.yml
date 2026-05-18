@@ -1,9 +1,14 @@
-name: Deploy Bot (Prod)
+name: Deploy Bot (Dev)
 
 on:
   push:
-    tags:
-      - 'bot-v*'
+    branches:
+      - master
+      - main
+    paths:
+      - 'bot/**'
+      - 'packages/shared/**'
+      - '.github/workflows/bot-dev.yml'
 
 jobs:
   deploy:
@@ -24,6 +29,6 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
           preCommands: |
-            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name tux-robot
-            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name tux-robot
-          command: deploy --env production
+            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name tux-robot-dev
+            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name tux-robot-dev
+          command: deploy --env dev
