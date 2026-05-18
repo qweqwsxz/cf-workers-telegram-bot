@@ -37,6 +37,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
+          # Explicitly provide the worker name for secret upload and deployment
+          name: ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'tux-robot-dev' || 'tux-robot' }}
           # Use 'dev' environment in wrangler.toml if the GitHub environment is 'dev'
           command: deploy --env ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'dev' || 'production' }}
           secrets: |
