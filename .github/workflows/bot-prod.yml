@@ -17,13 +17,22 @@ jobs:
           node-version: latest
       - name: Install dependencies
         run: npm install
+      - name: Check secrets
+        run: |
+          if [ -z "${{ secrets.SECRET_TELEGRAM_API_TOKEN }}" ]; then
+            echo "Error: SECRET_TELEGRAM_API_TOKEN is empty. Please set it in GitHub Secrets."
+            exit 1
+          fi
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
-          preCommands: |
-            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name tux-robot --env production
-            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name tux-robot --env production
-          command: deploy --env production
+          environment: production
+          secrets: |
+            SECRET_TELEGRAM_API_TOKEN
+            TAVILY_API_KEY
+        env:
+          SECRET_TELEGRAM_API_TOKEN: ${{ secrets.SECRET_TELEGRAM_API_TOKEN }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
