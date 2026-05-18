@@ -5,65 +5,27 @@ CF Workers Telegram Bot
 <br/>
 </h3>
 
-<h6 align="center">
-  <a href="https://cf-workers-telegram-bot.codebam.ca">Docs</a>
-</h6>
-
 <p align="center">
 <a href="https://github.com/codebam/cf-workers-telegram-bot/stargazers">  <img src="https://img.shields.io/github/stars/codebam/cf-workers-telegram-bot?style=for-the-badge&logo=starship&color=111111&logoColor=ffffff&labelColor=000000" alt="GitHub stars"/></a>
 <a href="https://github.com/codebam/cf-workers-telegram-bot/issues">
   <img src="https://img.shields.io/github/issues/codebam/cf-workers-telegram-bot?style=for-the-badge&logo=gitbook&color=111111&logoColor=ffffff&labelColor=000000" alt="GitHub issues"/></a>
 <a href="https://github.com/codebam/cf-workers-telegram-bot">  <img src="https://img.shields.io/github/forks/codebam/cf-workers-telegram-bot?style=for-the-badge&logo=git&color=111111&logoColor=ffffff&labelColor=000000" alt="GitHub forks"/></a>
-<a href="https://www.npmjs.com/package/@codebam/cf-workers-telegram-bot">  <img src="https://img.shields.io/npm/v/@codebam/cf-workers-telegram-bot?style=for-the-badge&logo=npm&color=111111&logoColor=ffffff&labelColor=000000" alt="npm version" /></a>
 </p>
 
 ![screenshot of cf-workers-telegram-bot](https://raw.githubusercontent.com/codebam/cf-workers-telegram-bot/master/assets/screenshot.png)
 
-A lightweight, type-safe Telegram Bot framework for Cloudflare Workers.
+A monorepo containing a Telegram Bot and a Svelte web application, both running on Cloudflare Workers and Pages.
 
-## Installation
+## Structure
 
-```sh
-npm install @codebam/cf-workers-telegram-bot
-```
+This is a monorepo containing:
+- `bot`: The main Telegram Bot built with [grammY](https://grammy.dev/)
+- `webapp`: A Svelte 5 web application for interacting with the bot
+- `consumer`: A minimal consumer template
 
-## Quick Start
+## Deployment
 
-```typescript
-import TelegramBot, { TelegramExecutionContext } from '@codebam/cf-workers-telegram-bot';
-
-export interface Env {
-	SECRET_TELEGRAM_API_TOKEN: string;
-}
-
-export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const bot = new TelegramBot(env.SECRET_TELEGRAM_API_TOKEN);
-
-		await bot
-			.command('start', async (ctx) => {
-				await ctx.reply('Hello! I am running on Cloudflare Workers.');
-			})
-			.onMessage(async (ctx) => {
-				await ctx.reply(`You said: ${ctx.text}`);
-			})
-			.handle(request);
-
-		return new Response('ok');
-	},
-};
-```
-
-## Features
-
-- **Type-safe**: Built with TypeScript for a better developer experience.
-- **Middleware support**: Run logic before your handlers.
-- **Built-in Webhook Management**: Easily set your webhook with a simple URL.
-- **Lightweight**: Zero dependencies (other than type definitions).
-
-## Using the Consumer Template
-
-The `consumer` directory in this repository serves as a template for new projects. It is included as a git submodule.
+### Deploying the Bot
 
 1. **Clone the repository with submodules**:
 
@@ -71,27 +33,20 @@ The `consumer` directory in this repository serves as a template for new project
    git clone --recursive https://github.com/codebam/cf-workers-telegram-bot.git
    ```
 
-   _Or, if you've already cloned it:_
+2. **Install dependencies**:
 
    ```sh
-   git submodule update --init --recursive
-   ```
-
-2. **Copy the consumer directory**:
-
-   ```sh
-   cp -r consumer my-new-bot
-   cd my-new-bot
    npm install
    ```
 
-3. **Configure your bot**:
-   Update `wrangler.toml` with your worker name.
+3. **Configure the bot**:
+   Navigate to the `bot` directory and update `wrangler.toml` with your desired worker name and bindings.
 
 4. **Set your Telegram Token**:
    Get a token from [@BotFather](https://t.me/BotFather) and add it to your worker:
 
    ```sh
+   cd bot
    npx wrangler secret put SECRET_TELEGRAM_API_TOKEN
    ```
 
@@ -101,31 +56,18 @@ The `consumer` directory in this repository serves as a template for new project
    npm run deploy
    ```
 
-6. **Set Webhook**:
-   Visit the following URL in your browser to register your worker with Telegram:
-   `https://<your-worker>.<your-subdomain>.workers.dev/<SECRET_TELEGRAM_API_TOKEN>/setWebhook`
+For more information on deploying grammY bots, see the [grammY deployment documentation](https://grammy.dev/guide/deployment).
 
-## Deployment
+### Deploying the Web App
 
-### Manual Deployment
-
-Use [Wrangler](https://developers.cloudflare.com/workers/wrangler/) to deploy:
+The web app is a SvelteKit project designed to be deployed to Cloudflare Pages.
 
 ```sh
-npx wrangler deploy
+cd webapp
+npm install
+npm run build
+npx wrangler pages deploy .svelte-kit/cloudflare
 ```
-
-### GitHub Actions
-
-To automate deployments, use the [Wrangler Action](https://github.com/cloudflare/wrangler-action) or Cloudflare's built-in [GitHub integration](https://developers.cloudflare.com/workers/ci-cd/github-actions/).
-
-## Structure
-
-This is a monorepo containing:
-- Root: Core library `@codebam/cf-workers-telegram-bot`
-- `ai-workflow`: A Cloudflare Workflow for handling long-running AI tasks
-- `webapp`: A Svelte 5 web application for interacting with the bot
-- `consumer`: A minimal consumer of the library
 
 ## Development
 
@@ -133,9 +75,7 @@ You can use the root `Makefile` to run common tasks across all projects:
 
 ```sh
 make build   # Build all projects
-make test    # Run tests for all projects
-make lint    # Lint all projects
-make format  # Format all projects
+make clean   # Clean build artifacts
 ```
 
 ### Setup
@@ -150,22 +90,6 @@ make format  # Format all projects
    ```sh
    ./setup_hooks.sh
    ```
-
-### Scripts
-
-- `npm run lint`: Run ESLint on the source code.
-- `npm run format`: Format the code using Prettier.
-- `npm run build`: Compile TypeScript and run type checks.
-- `npm run test`: Run unit tests with Vitest.
-- `npm run lint:all`: Run linting for the root project and all subprojects.
-- `npm run build:all`: Run build for the root project and all subprojects.
-- `npm run test:all`: Run tests for the root project and all subprojects.
-
-The pre-commit hook automatically runs formatting and linting on staged files (via `lint-staged`), followed by a full project type check and tests before every commit.
-
-## API Documentation
-
-Detailed API documentation is available at [cf-workers-telegram-bot.codebam.ca](https://cf-workers-telegram-bot.codebam.ca).
 
 ## License
 

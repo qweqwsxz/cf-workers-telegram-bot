@@ -1,36 +1,11 @@
 {
 	"name": "@codebam/cf-workers-telegram-bot",
 	"version": "12.6.20",
-	"description": "serverless telegram bot on cf workers",
-	"main": "./dist/main.js",
-	"module": "./dist/main.js",
-	"types": "./dist/main.d.ts",
-	"files": [
-		"dist",
-		"LICENSE",
-		"README.md"
-	],
-	"keywords": [
-		"cloudflare",
-		"telegram",
-		"worker",
-		"webhook"
-	],
+	"description": "serverless telegram bot monorepo",
+	"private": true,
 	"type": "module",
-	"publishConfig": {
-		"access": "public"
-	},
 	"scripts": {
-		"build": "tsc --project tsconfig.json",
-		"build:all": "npm run build && npm run build --prefix ai-workflow && npm run build --prefix consumer && npm run build --prefix webapp && npm run build --prefix bot",
-		"lint": "eslint src",
-		"lint:all": "npm run lint && npm run lint --prefix ai-workflow && npm run lint --prefix consumer && npm run lint --prefix webapp && npm run lint --prefix bot",
-		"test": "vitest --config vitest.config.js",
-		"test:all": "npm test && npm test --prefix ai-workflow && npm test --prefix consumer && npm test --prefix webapp && npm test --prefix bot",
-		"format": "prettier --write src test *.json *.js *.mjs",
-		"format:check": "prettier --check src test *.json *.js *.mjs",
-		"docs": "typedoc --options typedoc.json && node fix-docs.js",
-		"deploy:docs": "npm run docs && wrangler pages deploy docs",
+		"build": "npm run build --prefix consumer && npm run build --prefix webapp && npm run build --prefix bot",
 		"ncu": "npx npm-check-updates -u --root",
 		"ncu:interactive": "npx npm-check-updates -i --root",
 		"prepare": "./setup_hooks.sh"
@@ -42,39 +17,9 @@
 		"url": "git+https://github.com/codebam/cf-workers-telegram-bot.git"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.16.6",
-		"@eslint/compat": "^2.1.0",
-		"@eslint/js": "^10.0.1",
 		"@types/node": "^25.8.0",
-		"@typescript-eslint/eslint-plugin": "^8.59.3",
-		"@typescript-eslint/parser": "^8.59.3",
-		"eslint": "^10.4.0",
-		"eslint-config-prettier": "^10.1.8",
-		"globals": "^17.6.0",
-		"lint-staged": "^17.0.5",
 		"npm-check-updates": "^22.2.0",
-		"prettier": "^3.8.3",
-		"typedoc": "^0.28.19",
-		"typedoc-plugin-extras": "^4.0.1",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.59.3",
-		"vitest": "^4.1.6",
 		"wrangler": "^4.92.0"
-	},
-	"dependencies": {
-		"@eslint/eslintrc": "^3.3.5",
-		"@grammyjs/types": "^3.27.3",
-		"marked": "^18.0.3"
-	},
-	"typedocOptions": {
-		"entryPoints": [
-			"./src/main.ts"
-		]
-	},
-	"lint-staged": {
-		"*.{ts,js,mjs,json}": [
-			"prettier --write",
-			"eslint --fix"
-		]
 	}
 }

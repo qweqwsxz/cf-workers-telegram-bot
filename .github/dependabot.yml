@@ -9,7 +9,7 @@ updates:
     versioning-strategy: increase
 
   - package-ecosystem: "npm"
-    directory: "/ai-workflow"
+    directory: "/bot"
     schedule:
       interval: "weekly"
     allow:

@@ -1,23 +1,15 @@
 #!/usr/bin/env bash
 
 # Git pre-commit hook to ensure code quality before committing.
-# This hook runs lint-staged for per-file checks and then full project checks.
+# This hook runs full project checks.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
 echo "🔍 Running pre-commit checks..."
 
-# 1. Lint-staged (Formatting and Linting for changed files)
-echo "📂 Running lint-staged..."
-npx lint-staged
-
-# 2. Type checking / Build (Full project)
-echo "🏗️  Running full type check..."
+# 1. Type checking / Build (Full project)
+echo "🏗️  Running full build check..."
 npm run build
-
-# 3. Testing (Full project)
-echo "🧪 Running full tests..."
-CI=true npm run test
 
 echo "✅ All pre-commit checks passed!"
