@@ -234,6 +234,7 @@ export interface Environment {
 	AI_WORKFLOW: Fetcher;
 	MESSAGE_QUEUE?: any;
 	TAVILY_API_KEY?: string;
+	Sandbox: any;
 }
 
 export interface Tool {
