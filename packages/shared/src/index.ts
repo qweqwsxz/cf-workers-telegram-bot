@@ -202,7 +202,7 @@ export const AVAILABLE_MODELS: Record<
 	{ id: string; cost: number; supportsTools?: boolean }
 > = {
 	hermes: { id: '@hf/nousresearch/hermes-2-pro-mistral-7b', cost: 5, supportsTools: true },
-	gemma4: { id: '@cf/google/gemma-4-26b-a4b-it', cost: 10, supportsTools: true },
+	gemma4: { id: '@cf/meta/llama-3.1-8b-instruct', cost: 10, supportsTools: true },
 	'google/gemini-3-flash': { id: 'google/gemini-3-flash', cost: 15, supportsTools: true },
 	'google/gemini-3.1-flash-lite': {
 		id: 'google/gemini-3.1-flash-lite',
