@@ -29,6 +29,6 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
           preCommands: |
-            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name tux-robot-dev
-            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name tux-robot-dev
+            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name tux-robot-dev --env dev
+            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name tux-robot-dev --env dev
           command: deploy --env dev
