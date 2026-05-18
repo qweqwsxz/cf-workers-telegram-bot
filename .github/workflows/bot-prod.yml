@@ -37,13 +37,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
-          # Explicitly provide the worker name for secret upload and deployment
-          name: ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'tux-robot-dev' || 'tux-robot' }}
+          # Use 'preCommands' to upload secrets with an explicit name, bypassing action-level secret handling issues
+          preCommands: |
+            echo '${{ secrets.SECRET_TELEGRAM_API_TOKEN }}' | npx wrangler secret put SECRET_TELEGRAM_API_TOKEN --name ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'tux-robot-dev' || 'tux-robot' }}
+            echo '${{ secrets.TAVILY_API_KEY }}' | npx wrangler secret put TAVILY_API_KEY --name ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'tux-robot-dev' || 'tux-robot' }}
           # Use 'dev' environment in wrangler.toml if the GitHub environment is 'dev'
           command: deploy --env ${{ (inputs.environment || (github.ref_type == 'tag' && 'prod' || 'dev')) == 'dev' && 'dev' || 'production' }}
-          secrets: |
-            SECRET_TELEGRAM_API_TOKEN
-            TAVILY_API_KEY
-        env:
-          SECRET_TELEGRAM_API_TOKEN: ${{ secrets.SECRET_TELEGRAM_API_TOKEN }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
