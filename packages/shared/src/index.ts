@@ -212,6 +212,12 @@ export const AVAILABLE_MODELS: Record<
 		supportsVision: true
 	},
 	'google/gemini-3.1-pro': { id: 'google/gemini-3.1-pro', cost: 80, supportsTools: true, supportsVision: true },
+	'llama-3.2-vision': {
+		id: '@cf/meta/llama-3.2-11b-vision-instruct',
+		cost: 10,
+		supportsTools: true,
+		supportsVision: true
+	},
 	'kimi-k2.6': { id: '@cf/moonshotai/kimi-k2.6', cost: 40, supportsTools: true },
 	'glm-4.7-flash': { id: '@cf/zai-org/glm-4.7-flash', cost: 10, supportsTools: true },
 	'llama-3.3-70b': {
