@@ -240,8 +240,9 @@ export interface Environment {
 export interface Tool {
 	name: string;
 	description: string;
-	parameters: Record<string, any>;
-	function: (args: any) => Promise<any>;
+	parameters: Record<string, unknown>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	function: (args: any) => Promise<unknown>;
 }
 
 export interface Task {
@@ -262,8 +263,7 @@ export interface Task {
 	systemPrompt?: string;
 	telegramToken?: string;
 	token?: string;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	tools?: any[];
+	tools?: Tool[];
 	stream?: boolean;
 }
 

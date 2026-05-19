@@ -3,10 +3,15 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"check": "tsc --noEmit"
+	},
 	"exports": {
 		".": "./src/index.ts"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260519.1",
 		"typescript": "^6.0.3"
 	},
 	"dependencies": {
