@@ -391,15 +391,167 @@ export interface GeminiPart {
 
 export interface AiResponse {
 	choices?: {
-		delta?: { content?: string };
-		message?: { content?: string; tool_calls?: RawToolCall[] };
+		delta?: { content?: string; reasoning_content?: string; thought?: string };
+		message?: { content?: string; tool_calls?: RawToolCall[]; reasoning_content?: string; thought?: string };
 		tool_calls?: RawToolCall[];
 	}[];
 	response?: string;
+	text?: string;
+	content?: string;
+	delta?: string | { content?: string; reasoning_content?: string; thought?: string };
+	parts?: GeminiPart[];
 	candidates?: {
 		content?: { parts?: GeminiPart[] };
 	}[];
+	message?: Record<string, unknown>;
 	tool_calls?: RawToolCall[];
+}
+
+type ExtractInput = string | AiResponse | Record<string, unknown> | null | undefined;
+
+export const THINK_TAGS = ['think', 'thinking', 'reasoning', 'reflection', 'thought', 'analysis'];
+export const THINK_BLOCK_RE = new RegExp(
+	`<(?:${THINK_TAGS.join('|')})(?:\\s[^>]*)?>[\\s\\S]*?</(?:${THINK_TAGS.join('|')})>`,
+	'gi'
+);
+export const THINK_OPEN_ONLY_RE = new RegExp(`<(?:${THINK_TAGS.join('|')})(?:\\s[^>]*)?>[\\s\\S]*$`, 'i');
+
+/**
+ * Strip <think>/<reasoning>/etc. blocks from a complete string. Also drops
+ * an unterminated opening block (when the model never closes it) and trims
+ * leading whitespace left behind.
+ */
+export function stripThinking(text: string): string {
+	if (!text) return text;
+	let out = text.replace(THINK_BLOCK_RE, '');
+	out = out.replace(THINK_OPEN_ONLY_RE, '');
+	return out.replace(/^\s+/, '');
+}
+
+/**
+ * Robustly extract text from various AI response formats.
+ */
+export function extractText(obj: ExtractInput, includeReasoning = false): string {
+	if (typeof obj === 'string') {
+		return obj;
+	}
+	if (typeof obj !== 'object' || obj === null) {
+		return '';
+	}
+
+	const response = obj as Record<string, unknown>;
+
+	if (typeof response.response === 'string') return response.response;
+	if (typeof response.text === 'string') return response.text;
+	if (typeof response.content === 'string') return response.content;
+	
+	// Handle delta objects (OpenAI-style streaming)
+	if (typeof response.delta === 'object' && response.delta !== null) {
+		const delta = response.delta as any;
+		if (typeof delta.content === 'string') return delta.content;
+		if (includeReasoning) {
+			if (typeof delta.reasoning_content === 'string') return delta.reasoning_content;
+			if (typeof delta.thought === 'string') return delta.thought;
+		}
+		// Skip reasoning_content and thought in the final extraction to prevent leaks
+		if (typeof delta.text === 'string') return delta.text;
+	}
+	if (typeof response.delta === 'string') return response.delta;
+
+	// Recursively search in common nested fields
+	if (Array.isArray(response.choices) && response.choices.length > 0)
+		return extractText(response.choices[0] as ExtractInput, includeReasoning);
+	if (response.message) return extractText(response.message as ExtractInput, includeReasoning);
+	if (response.delta) return extractText(response.delta as ExtractInput, includeReasoning);
+	if (response.tool_calls) return ''; // Skip tool calls in extraction
+	if (Array.isArray(response.candidates) && response.candidates.length > 0)
+		return extractText(response.candidates[0] as ExtractInput, includeReasoning);
+	if (response.content) return extractText(response.content as ExtractInput, includeReasoning);
+	
+	// Gemini parts
+	if (Array.isArray(response.parts) && response.parts.length > 0) {
+		let text = '';
+		for (const part of response.parts as GeminiPart[]) {
+			if (!includeReasoning && part.thought) continue; // Gemini thinking parts
+			if (part.text) text += part.text;
+		}
+		return text;
+	}
+
+	// Any other string field as a fallback, but excluding known meta/thinking fields
+	for (const key of Object.keys(response)) {
+		if (['id', 'model', 'object', 'created', 'usage', 'index', 'finish_reason', 'reasoning_content', 'thought'].includes(key)) continue;
+		if (typeof response[key] === 'string' && response[key]) return response[key] as string;
+	}
+
+	return '';
+}
+
+export function extractThinking(obj: ExtractInput): string {
+	if (typeof obj !== 'object' || obj === null) return '';
+	const response = obj as Record<string, unknown>;
+
+	if (typeof response.delta === 'object' && response.delta !== null) {
+		const delta = response.delta as any;
+		if (typeof delta.thought === 'string') return delta.thought;
+	}
+
+	if (Array.isArray(response.choices) && response.choices.length > 0) {
+		const choice = response.choices[0] as any;
+		if (choice.delta && typeof choice.delta.thought === 'string') return choice.delta.thought;
+		if (choice.message && typeof choice.message.thought === 'string') return choice.message.thought;
+		return extractThinking(choice as ExtractInput);
+	}
+	if (response.message) {
+		if (typeof (response.message as any).thought === 'string') return (response.message as any).thought;
+		return extractThinking(response.message as ExtractInput);
+	}
+	if (response.delta) return extractThinking(response.delta as ExtractInput);
+
+	if (Array.isArray(response.candidates) && response.candidates.length > 0) {
+		const candidate = response.candidates[0] as any;
+		if (candidate.content && Array.isArray(candidate.content.parts)) {
+			let thinking = '';
+			for (const part of candidate.content.parts as GeminiPart[]) {
+				if (part.thought && part.text) thinking += part.text;
+			}
+			return thinking;
+		}
+	}
+	
+	if (Array.isArray(response.parts)) {
+		let thinking = '';
+		for (const part of response.parts as GeminiPart[]) {
+			if (part.thought && part.text) thinking += part.text;
+		}
+		return thinking;
+	}
+
+	return '';
+}
+
+export function extractReasoning(obj: ExtractInput): string {
+	if (typeof obj !== 'object' || obj === null) return '';
+	const response = obj as Record<string, unknown>;
+
+	if (typeof response.delta === 'object' && response.delta !== null) {
+		const delta = response.delta as any;
+		if (typeof delta.reasoning_content === 'string') return delta.reasoning_content;
+	}
+
+	if (Array.isArray(response.choices) && response.choices.length > 0) {
+		const choice = response.choices[0] as any;
+		if (choice.delta && typeof choice.delta.reasoning_content === 'string') return choice.delta.reasoning_content;
+		if (choice.message && typeof choice.message.reasoning_content === 'string') return choice.message.reasoning_content;
+		return extractReasoning(choice as ExtractInput);
+	}
+	if (response.message) {
+		if (typeof (response.message as any).reasoning_content === 'string') return (response.message as any).reasoning_content;
+		return extractReasoning(response.message as ExtractInput);
+	}
+	if (response.delta) return extractReasoning(response.delta as ExtractInput);
+
+	return '';
 }
 
 export async function verifyTelegramWebAppData(
