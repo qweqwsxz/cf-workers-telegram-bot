@@ -11,6 +11,7 @@
 		".": "./src/index.ts"
 	},
 	"devDependencies": {
+		"@cloudflare/sandbox": "^0.10.1",
 		"@cloudflare/workers-types": "^4.20260519.1",
 		"typescript": "^6.0.3"
 	},

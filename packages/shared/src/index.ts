@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import type { Sandbox } from '@cloudflare/sandbox';
 
 /** Class representing a manager for conversation history stored in KV */
 export class HistoryManager {
@@ -232,9 +233,9 @@ export interface Environment {
 	R2: R2Bucket;
 	CONVERSATION_HISTORY: KVNamespace;
 	AI_WORKFLOW: Fetcher;
-	MESSAGE_QUEUE?: any;
+	MESSAGE_QUEUE: Queue<Task>;
 	TAVILY_API_KEY?: string;
-	Sandbox: any;
+	Sandbox: DurableObjectNamespace<Sandbox>;
 }
 
 export interface Tool {
@@ -243,6 +244,21 @@ export interface Tool {
 	parameters: Record<string, unknown>;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function: (args: any) => Promise<unknown>;
+}
+
+export interface NormalizedToolCall {
+	id: string;
+	type: 'function';
+	function: { name: string; arguments: string };
+}
+
+export interface ChatMessage {
+	role: 'system' | 'user' | 'assistant' | 'tool' | string;
+	content?: string;
+	tool_calls?: NormalizedToolCall[];
+	tool_call_id?: string;
+	name?: string;
+	geminiParts?: GeminiPart[];
 }
 
 export interface Task {
@@ -267,17 +283,32 @@ export interface Task {
 	stream?: boolean;
 }
 
+export interface RawToolCall {
+	id?: string;
+	type?: string;
+	name?: string;
+	arguments?: string | Record<string, unknown>;
+	function?: { name?: string; arguments?: string | Record<string, unknown> };
+}
+
+export interface GeminiPart {
+	text?: string;
+	thought?: boolean;
+	functionCall?: { name: string; args: Record<string, unknown> };
+	functionResponse?: { name: string; response: { content: string } };
+}
+
 export interface AiResponse {
 	choices?: {
 		delta?: { content?: string };
-		message?: { content?: string; tool_calls?: any[] };
-		tool_calls?: any[];
+		message?: { content?: string; tool_calls?: RawToolCall[] };
+		tool_calls?: RawToolCall[];
 	}[];
 	response?: string;
 	candidates?: {
-		content?: { parts?: { text?: string }[] };
+		content?: { parts?: GeminiPart[] };
 	}[];
-	tool_calls?: any[];
+	tool_calls?: RawToolCall[];
 }
 
 export async function verifyTelegramWebAppData(
