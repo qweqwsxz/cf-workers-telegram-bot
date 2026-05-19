@@ -288,6 +288,7 @@ export interface Task {
 	token?: string;
 	tools?: Tool[];
 	stream?: boolean;
+	geminiParts?: GeminiPart[];
 }
 
 export interface RawToolCall {
