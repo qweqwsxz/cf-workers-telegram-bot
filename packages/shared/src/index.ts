@@ -219,7 +219,7 @@ export const AVAILABLE_MODELS: Record<
 		supportsVision: true
 	},
 	'kimi-k2.6': { id: '@cf/moonshotai/kimi-k2.6', cost: 40, supportsTools: true },
-	'glm-4.7-flash': { id: '@cf/zai-org/glm-4.7-flash', cost: 10, supportsTools: true },
+	'glm-4.7-flash': { id: '@cf/zai-org/glm-4.7-flash', cost: 10, supportsTools: true, supportsVision: true },
 	'llama-3.3-70b': {
 		id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
 		cost: 40,
