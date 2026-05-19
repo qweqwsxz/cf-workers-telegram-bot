@@ -191,14 +191,20 @@ export async function markdownToHtml(s: string): Promise<string> {
 	return (parsed as string).replace(/\n{3,}/g, '\n\n').trim();
 }
 
-export function sanitizeMarkdownV2(text: string): string {
-	return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+export function sanitizeMarkdownV2(text: string, isInsideLink = false): string {
+	// Standard MarkdownV2 characters that MUST be escaped outside of code/pre
+	let escaped = text.replace(/([_*[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+	if (isInsideLink) {
+		// Inside links, additional characters need escaping
+		escaped = escaped.replace(/([()])/g, '\\$1');
+	}
+	return escaped;
 }
 
 export async function markdownToMarkdownV2(s: string): Promise<string> {
 	const renderer = new marked.Renderer();
 
-	const escape = (text: string) => sanitizeMarkdownV2(text);
+	const escape = (text: string, isLink = false) => sanitizeMarkdownV2(text, isLink);
 
 	renderer.heading = ({ tokens }) => {
 		const text = renderer.parser.parseInline(tokens);
@@ -241,8 +247,8 @@ export async function markdownToMarkdownV2(s: string): Promise<string> {
 	renderer.del = ({ tokens }) => `~${renderer.parser.parseInline(tokens)}~`;
 
 	renderer.link = ({ href, tokens }) =>
-		`[${renderer.parser.parseInline(tokens)}](${escape(href)})`;
-	renderer.image = ({ href, text }) => `[${escape(text)}](${escape(href)})`;
+		`[${renderer.parser.parseInline(tokens)}](${escape(href, true)})`;
+	renderer.image = ({ href, text }) => `[${escape(text)}](${escape(href, true)})`;
 
 	renderer.blockquote = ({ tokens }) => {
 		const text = renderer.parser.parse(tokens).trim();
