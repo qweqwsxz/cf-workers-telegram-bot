@@ -321,7 +321,6 @@ export interface Environment {
 	R2: R2Bucket;
 	CONVERSATION_HISTORY: KVNamespace;
 	AI_WORKFLOW: Fetcher;
-	MESSAGE_QUEUE: Queue<Task>;
 	TAVILY_API_KEY?: string;
 	Sandbox: DurableObjectNamespace<Sandbox>;
 	VECTORIZE?: VectorizeIndex;
