@@ -289,7 +289,6 @@ export const AVAILABLE_MODELS: Record<
 	string,
 	{ id: string; cost: number; supportsTools?: boolean; supportsVision?: boolean }
 > = {
-	hermes: { id: '@hf/nousresearch/hermes-2-pro-mistral-7b', cost: 5, supportsTools: true },
 	gemma4: { id: '@cf/google/gemma-4-26b-a4b-it', cost: 10, supportsTools: true, supportsVision: true },
 	'google/gemini-3-flash': { id: 'google/gemini-3-flash', cost: 15, supportsTools: true, supportsVision: true },
 	'google/gemini-3.1-flash-lite': {
@@ -307,11 +306,6 @@ export const AVAILABLE_MODELS: Record<
 	},
 	'kimi-k2.6': { id: '@cf/moonshotai/kimi-k2.6', cost: 40, supportsTools: true, supportsVision: true },
 	'glm-4.7-flash': { id: '@cf/zai-org/glm-4.7-flash', cost: 10, supportsTools: true, supportsVision: true },
-	'llama-3.3-70b': {
-		id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-		cost: 40,
-		supportsTools: true
-	},
 	'deepseek-r1-32b': {
 		id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
 		cost: 60,
