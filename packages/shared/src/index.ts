@@ -191,6 +191,87 @@ export async function markdownToHtml(s: string): Promise<string> {
 	return (parsed as string).replace(/\n{3,}/g, '\n\n').trim();
 }
 
+export function sanitizeMarkdownV2(text: string): string {
+	return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+export async function markdownToMarkdownV2(s: string): Promise<string> {
+	const renderer = new marked.Renderer();
+
+	const escape = (text: string) => sanitizeMarkdownV2(text);
+
+	renderer.heading = ({ tokens }) => {
+		const text = renderer.parser.parseInline(tokens);
+		return `*${text}*\n\n`;
+	};
+
+	renderer.paragraph = ({ tokens }) => {
+		const text = renderer.parser.parseInline(tokens);
+		return `${text}\n\n`;
+	};
+
+	renderer.br = () => '\n';
+
+	renderer.list = ({ items, ordered, start }) => {
+		let result = '';
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			const prefix = ordered
+				? `${start !== '' && start !== undefined ? Number(start) + i : i + 1}\\. `
+				: '• ';
+			result += `${prefix}${renderer.listitem(item)}\n`;
+		}
+		return result;
+	};
+
+	renderer.listitem = (item) => {
+		return renderer.parser.parse(item.tokens).trim();
+	};
+
+	renderer.strong = ({ tokens }) => `*${renderer.parser.parseInline(tokens)}*`;
+	renderer.em = ({ tokens }) => `_${renderer.parser.parseInline(tokens)}_`;
+	renderer.codespan = ({ text }) => `\`${text.replace(/[`\\]/g, '\\$&')}\``;
+	renderer.code = ({ text, lang }) => {
+		const escapedText = text.replace(/[`\\]/g, '\\$&');
+		if (lang) {
+			return `\`\`\`${lang}\n${escapedText}\n\`\`\`\n`;
+		}
+		return `\`\`\`\n${escapedText}\n\`\`\`\n`;
+	};
+	renderer.del = ({ tokens }) => `~${renderer.parser.parseInline(tokens)}~`;
+
+	renderer.link = ({ href, tokens }) =>
+		`[${renderer.parser.parseInline(tokens)}](${escape(href)})`;
+	renderer.image = ({ href, text }) => `[${escape(text)}](${escape(href)})`;
+
+	renderer.blockquote = ({ tokens }) => {
+		const text = renderer.parser.parse(tokens).trim();
+		return text
+			.split('\n')
+			.map((line) => `>${line}`)
+			.join('\n');
+	};
+
+	renderer.hr = () => `────────\n\n`;
+
+	renderer.text = (token) => {
+		if ('tokens' in token && token.tokens) {
+			return renderer.parser.parseInline(token.tokens);
+		}
+		return escape(token.text);
+	};
+
+	marked.setOptions({
+		gfm: true,
+		breaks: true
+	});
+
+	const parsed = await marked.parse(s, { renderer });
+
+	// Trim multiple newlines
+	return (parsed as string).replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export const SYSTEM_PROMPTS = {
 	TUX_ROBOT:
 		'You are a friendly assistant named TuxRobot. You have access to an HTTP fetch tool, a web search tool, and document tools. If a user asks you to get data from an API, look up a profile, or visit a website, you MUST execute the fetch tool yourself to get the data. You can perform web searches using the `tavily_search` tool. If the user asks about an uploaded document, a file, a PDF, or a markdown file, you MUST use the `search_telegram_file` tool to search its contents; do NOT use `tavily_search` or write code. If a user asks a follow-up question about a document they previously uploaded, use the tool again if needed. When calling tools, use the EXACT name provided (e.g., `search_telegram_file`); do NOT add any prefixes like "functions.". If the user replies with only a single word, sticker, or emoji, respond with no more than one short paragraph. Always keep replies below 4096 characters. Only use formatting that will be supported on Telegram. DO NOT use LaTeX formatting or math equations (like \\( ... \\) or \\[ ... \\]); always use standard plain text or simple markdown formatting as LaTeX does not render on Telegram.',
