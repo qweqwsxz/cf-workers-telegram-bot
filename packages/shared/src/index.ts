@@ -351,7 +351,7 @@ export interface ChatMessage {
 }
 
 export interface Task {
-	type: 'code' | 'message' | 'business_message' | 'photo' | 'gen_photo' | 'voice' | 'tool_call';
+	type: 'message' | 'business_message' | 'photo' | 'gen_photo' | 'voice' | 'tool_call';
 	updateId?: number;
 	updateType?: string;
 	guestQueryId?: string;
