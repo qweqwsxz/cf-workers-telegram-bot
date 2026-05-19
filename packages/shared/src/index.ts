@@ -432,96 +432,74 @@ export function stripThinking(text: string): string {
  * Robustly extract text from various AI response formats.
  */
 export function extractText(obj: ExtractInput, includeReasoning = false): string {
-	if (typeof obj === 'string') {
-		return obj;
-	}
-	if (typeof obj !== 'object' || obj === null) {
-		return '';
-	}
+	if (typeof obj === 'string') return obj;
+	if (!obj || typeof obj !== 'object') return '';
 
-	const response = obj as Record<string, unknown>;
+	const response = obj as any;
 
-	if (typeof response.response === 'string') return response.response;
-	if (typeof response.text === 'string') return response.text;
-	if (typeof response.content === 'string') return response.content;
+	// Prioritize direct fields
+	if (response.response && typeof response.response === 'string') return response.response;
+	if (response.text && typeof response.text === 'string') return response.text;
+	if (response.content && typeof response.content === 'string') return response.content;
 	
 	// Handle delta objects (OpenAI-style streaming)
-	if (typeof response.delta === 'object' && response.delta !== null) {
-		const delta = response.delta as any;
-		if (typeof delta.content === 'string') return delta.content;
+	if (response.delta && typeof response.delta === 'object') {
+		if (response.delta.content && typeof response.delta.content === 'string') return response.delta.content;
 		if (includeReasoning) {
-			if (typeof delta.reasoning_content === 'string') return delta.reasoning_content;
-			if (typeof delta.thought === 'string') return delta.thought;
+			if (response.delta.reasoning_content && typeof response.delta.reasoning_content === 'string') return response.delta.reasoning_content;
+			if (response.delta.thought && typeof response.delta.thought === 'string') return response.delta.thought;
 		}
-		// Skip reasoning_content and thought in the final extraction to prevent leaks
-		if (typeof delta.text === 'string') return delta.text;
+		if (response.delta.text && typeof response.delta.text === 'string') return response.delta.text;
 	}
-	if (typeof response.delta === 'string') return response.delta;
+	if (response.delta && typeof response.delta === 'string') return response.delta;
 
-	// Recursively search in common nested fields
-	if (Array.isArray(response.choices) && response.choices.length > 0)
-		return extractText(response.choices[0] as ExtractInput, includeReasoning);
-	if (response.message) return extractText(response.message as ExtractInput, includeReasoning);
-	if (response.delta) return extractText(response.delta as ExtractInput, includeReasoning);
-	if (response.tool_calls) return ''; // Skip tool calls in extraction
-	if (Array.isArray(response.candidates) && response.candidates.length > 0)
-		return extractText(response.candidates[0] as ExtractInput, includeReasoning);
-	if (response.content) return extractText(response.content as ExtractInput, includeReasoning);
+	// Nested fields
+	if (response.choices?.[0]) {
+		const choice = response.choices[0];
+		if (choice.delta) return extractText(choice.delta, includeReasoning);
+		if (choice.message) return extractText(choice.message, includeReasoning);
+		if (choice.text && typeof choice.text === 'string') return choice.text;
+	}
+	
+	if (response.candidates?.[0]) return extractText(response.candidates[0].content, includeReasoning);
 	
 	// Gemini parts
-	if (Array.isArray(response.parts) && response.parts.length > 0) {
+	if (Array.isArray(response.parts)) {
 		let text = '';
-		for (const part of response.parts as GeminiPart[]) {
-			if (!includeReasoning && part.thought) continue; // Gemini thinking parts
+		for (const part of response.parts) {
+			if (!includeReasoning && part.thought) continue;
 			if (part.text) text += part.text;
 		}
 		return text;
-	}
-
-	// Any other string field as a fallback, but excluding known meta/thinking fields
-	for (const key of Object.keys(response)) {
-		if (['id', 'model', 'object', 'created', 'usage', 'index', 'finish_reason', 'reasoning_content', 'thought'].includes(key)) continue;
-		if (typeof response[key] === 'string' && response[key]) return response[key] as string;
 	}
 
 	return '';
 }
 
 export function extractThinking(obj: ExtractInput): string {
-	if (typeof obj !== 'object' || obj === null) return '';
-	const response = obj as Record<string, unknown>;
+	if (!obj || typeof obj !== 'object') return '';
+	const response = obj as any;
 
-	if (typeof response.delta === 'object' && response.delta !== null) {
-		const delta = response.delta as any;
-		if (typeof delta.thought === 'string') return delta.thought;
-	}
+	if (response.delta?.thought && typeof response.delta.thought === 'string') return response.delta.thought;
 
-	if (Array.isArray(response.choices) && response.choices.length > 0) {
-		const choice = response.choices[0] as any;
-		if (choice.delta && typeof choice.delta.thought === 'string') return choice.delta.thought;
-		if (choice.message && typeof choice.message.thought === 'string') return choice.message.thought;
-		return extractThinking(choice as ExtractInput);
+	if (response.choices?.[0]) {
+		const choice = response.choices[0];
+		if (choice.delta?.thought) return choice.delta.thought;
+		if (choice.message?.thought) return choice.message.thought;
+		return extractThinking(choice);
 	}
-	if (response.message) {
-		if (typeof (response.message as any).thought === 'string') return (response.message as any).thought;
-		return extractThinking(response.message as ExtractInput);
-	}
-	if (response.delta) return extractThinking(response.delta as ExtractInput);
-
-	if (Array.isArray(response.candidates) && response.candidates.length > 0) {
-		const candidate = response.candidates[0] as any;
-		if (candidate.content && Array.isArray(candidate.content.parts)) {
-			let thinking = '';
-			for (const part of candidate.content.parts as GeminiPart[]) {
-				if (part.thought && part.text) thinking += part.text;
-			}
-			return thinking;
+	
+	if (response.candidates?.[0]?.content?.parts) {
+		let thinking = '';
+		for (const part of response.candidates[0].content.parts) {
+			if (part.thought && part.text) thinking += part.text;
 		}
+		return thinking;
 	}
 	
 	if (Array.isArray(response.parts)) {
 		let thinking = '';
-		for (const part of response.parts as GeminiPart[]) {
+		for (const part of response.parts) {
 			if (part.thought && part.text) thinking += part.text;
 		}
 		return thinking;
@@ -531,25 +509,17 @@ export function extractThinking(obj: ExtractInput): string {
 }
 
 export function extractReasoning(obj: ExtractInput): string {
-	if (typeof obj !== 'object' || obj === null) return '';
-	const response = obj as Record<string, unknown>;
+	if (!obj || typeof obj !== 'object') return '';
+	const response = obj as any;
 
-	if (typeof response.delta === 'object' && response.delta !== null) {
-		const delta = response.delta as any;
-		if (typeof delta.reasoning_content === 'string') return delta.reasoning_content;
-	}
+	if (response.delta?.reasoning_content && typeof response.delta.reasoning_content === 'string') return response.delta.reasoning_content;
 
-	if (Array.isArray(response.choices) && response.choices.length > 0) {
-		const choice = response.choices[0] as any;
-		if (choice.delta && typeof choice.delta.reasoning_content === 'string') return choice.delta.reasoning_content;
-		if (choice.message && typeof choice.message.reasoning_content === 'string') return choice.message.reasoning_content;
-		return extractReasoning(choice as ExtractInput);
+	if (response.choices?.[0]) {
+		const choice = response.choices[0];
+		if (choice.delta?.reasoning_content) return choice.delta.reasoning_content;
+		if (choice.message?.reasoning_content) return choice.message.reasoning_content;
+		return extractReasoning(choice);
 	}
-	if (response.message) {
-		if (typeof (response.message as any).reasoning_content === 'string') return (response.message as any).reasoning_content;
-		return extractReasoning(response.message as ExtractInput);
-	}
-	if (response.delta) return extractReasoning(response.delta as ExtractInput);
 
 	return '';
 }
