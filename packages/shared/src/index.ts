@@ -243,6 +243,7 @@ export interface Environment {
 	MESSAGE_QUEUE: Queue<Task>;
 	TAVILY_API_KEY?: string;
 	Sandbox: DurableObjectNamespace<Sandbox>;
+	VECTORIZE?: VectorizeIndex;
 }
 
 export interface Tool {
