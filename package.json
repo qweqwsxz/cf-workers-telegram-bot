@@ -1,6 +1,6 @@
 {
 	"name": "@codebam/cf-workers-telegram-bot",
-	"version": "12.6.37",
+	"version": "12.6.38",
 	"description": "serverless telegram bot monorepo",
 	"private": true,
 	"type": "module",
