@@ -200,17 +200,18 @@ export const SYSTEM_PROMPTS = {
 
 export const AVAILABLE_MODELS: Record<
 	string,
-	{ id: string; cost: number; supportsTools?: boolean }
+	{ id: string; cost: number; supportsTools?: boolean; supportsVision?: boolean }
 > = {
 	hermes: { id: '@hf/nousresearch/hermes-2-pro-mistral-7b', cost: 5, supportsTools: true },
 	gemma4: { id: '@cf/google/gemma-4-26b-a4b-it', cost: 10, supportsTools: true },
-	'google/gemini-3-flash': { id: 'google/gemini-3-flash', cost: 15, supportsTools: true },
+	'google/gemini-3-flash': { id: 'google/gemini-3-flash', cost: 15, supportsTools: true, supportsVision: true },
 	'google/gemini-3.1-flash-lite': {
 		id: 'google/gemini-3.1-flash-lite',
 		cost: 10,
-		supportsTools: true
+		supportsTools: true,
+		supportsVision: true
 	},
-	'google/gemini-3.1-pro': { id: 'google/gemini-3.1-pro', cost: 80, supportsTools: true },
+	'google/gemini-3.1-pro': { id: 'google/gemini-3.1-pro', cost: 80, supportsTools: true, supportsVision: true },
 	'kimi-k2.6': { id: '@cf/moonshotai/kimi-k2.6', cost: 40, supportsTools: true },
 	'glm-4.7-flash': { id: '@cf/zai-org/glm-4.7-flash', cost: 10, supportsTools: true },
 	'llama-3.3-70b': {
@@ -294,6 +295,7 @@ export interface RawToolCall {
 export interface GeminiPart {
 	text?: string;
 	thought?: boolean;
+	inlineData?: { mimeType: string; data: string };
 	functionCall?: { name: string; args: Record<string, unknown> };
 	functionResponse?: { name: string; response: { content: string } };
 }
