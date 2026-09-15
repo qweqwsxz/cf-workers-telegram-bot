@@ -327,6 +327,8 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 				cells: [headerCells, ...rows],
 				is_bordered: true,
 				is_striped: true,
+				// Bot API 10.3: compact tables render with smaller cell indents.
+				is_compact: true,
 			});
 		} else {
 			if ('raw' in token && token.raw.trim()) {
