@@ -116,6 +116,24 @@ CI runs on GitHub Actions (`.github/workflows/deploy.yml`):
 | tag `bot-v*`     | deploy bot to `production`          |
 | tag `webapp-v*`  | deploy webapp to Cloudflare Pages   |
 
+### Releasing to production
+
+Cut releases with the release script. It fetches tags first (the remote is
+authoritative for numbering), refuses to run on dirty worktrees or stale
+branches, runs the same checks as the deploy workflow, creates the next patch
+tag per component and pushes submodule branches before the superproject and
+tags, because the workflow checks submodules out at the tagged commit.
+
+```sh
+./scripts/release.sh both                  # bot + webapp, GPG-signed tags
+./scripts/release.sh bot                   # bot only
+./scripts/release.sh bot -m "fix reason"   # custom tag message
+./scripts/release.sh both -d               # dry run, prints the plan only
+```
+
+Pass `--no-sign` for annotated (unsigned) tags, `--no-push` to stop after tag
+creation, or `--skip-checks` if you already ran the checks.
+
 Required repository secrets:
 
 - `CLOUDFLARE_API_TOKEN`
