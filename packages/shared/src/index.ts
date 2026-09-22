@@ -771,6 +771,41 @@ export function extractText(obj: ExtractInput, includeReasoning = false): string
 	return '';
 }
 
+/**
+ * Normalize a model-supplied tool-call `arguments` value into the single
+ * JSON-encoded string the Chat Completions API expects.
+ *
+ * Some models (granite on Workers AI) double-encode: `arguments` is itself a
+ * JSON string containing the JSON document, so one parse yields a string and
+ * every tool receives a string instead of an object. Unwrap nested string
+ * encodings before re-encoding.
+ */
+export function normalizeToolArguments(raw: unknown): string {
+	let value: unknown = raw;
+	for (let depth = 0; depth < 3 && typeof value === 'string'; depth++) {
+		if (!value.trim()) return '{}';
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(value);
+		} catch {
+			// Not JSON at all; hand the raw text to the tool unchanged.
+			return value;
+		}
+		if (typeof parsed === 'string') {
+			value = parsed;
+			continue;
+		}
+		value = parsed;
+		break;
+	}
+	if (typeof value === 'string') return value;
+	try {
+		return JSON.stringify(value) ?? '{}';
+	} catch {
+		return '{}';
+	}
+}
+
 export function extractThinking(obj: ExtractInput): string {
 	if (!obj || typeof obj !== 'object') return '';
 	const response = obj as any;
