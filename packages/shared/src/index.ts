@@ -295,10 +295,19 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 				language: token.lang || undefined,
 			});
 		} else if (token.type === 'blockquote') {
-			blocks.push({
-				type: 'blockquote',
-				blocks: [{ type: 'paragraph', text: token.text }],
-			});
+			// Bot API 10.3: long quotations collapse behind an expand control
+			// instead of pushing the rest of the answer off the screen.
+			if (token.text.length > 300) {
+				blocks.push({
+					type: 'expandable_blockquote',
+					text: token.text,
+				});
+			} else {
+				blocks.push({
+					type: 'blockquote',
+					blocks: [{ type: 'paragraph', text: token.text }],
+				});
+			}
 		} else if (token.type === 'list') {
 			const items = (token.items || []).map((item: any) => ({
 				label: item.text,
@@ -651,6 +660,12 @@ export interface Task {
 	 * workflow attempt fails.
 	 */
 	chargedAmount?: number;
+	/**
+	 * When set, the reply is delivered as an ephemeral message (Bot API 10.2)
+	 * visible only to this user. Set for group / supergroup chats so an answer
+	 * does not spam every member.
+	 */
+	ephemeralReceiverId?: number;
 }
 
 export interface RawToolCall {
