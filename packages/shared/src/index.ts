@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import type { MarkedToken, Token } from 'marked';
 import type { Sandbox } from '@cloudflare/sandbox';
 
 /** Class representing a manager for conversation history stored in KV */
@@ -194,13 +195,13 @@ export async function markdownToHtml(s: string): Promise<string> {
 	const parsed = await marked.parse(s, { renderer });
 
 	// Trim multiple newlines
-	return (parsed as string).replace(/\n{3,}/g, '\n\n').trim();
+	return parsed.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export function sanitizeMarkdownV2(text: string, isInsideLink = false): string {
 	// Standard MarkdownV2 characters that MUST be escaped outside of code/pre
 	// First, we unescape any existing escapes to avoid double-escaping
-	let unescaped = text.replace(/\\([_*[\]()~`>#+\-=|{}.!\\])/g, '$1');
+	const unescaped = text.replace(/\\([_*[\]()~`>#+\-=|{}.!\\])/g, '$1');
 
 	// Telegram's MarkdownV2 is extremely strict: ANY of these characters MUST be escaped
 	// if they are not part of a valid entity. To be safe, we escape them all.
@@ -217,7 +218,7 @@ export function formatTableAsAscii(header: string[], rows: string[][]): string {
 	const colCount = Math.max(header.length, ...rows.map((r) => r.length));
 	if (colCount === 0) return '';
 
-	const colWidths = new Array(colCount).fill(0);
+	const colWidths: number[] = new Array<number>(colCount).fill(0);
 	for (let c = 0; c < colCount; c++) {
 		colWidths[c] = Math.max(
 			(header[c] || '').length,
@@ -228,10 +229,10 @@ export function formatTableAsAscii(header: string[], rows: string[][]): string {
 	const pad = (text: string, width: number) => text + ' '.repeat(Math.max(0, width - text.length));
 
 	const topBorder = '┌' + colWidths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐';
-	const headerRow = '│ ' + Array.from({ length: colCount }, (_, i) => pad(header[i] || '', colWidths[i])).join(' │ ') + ' │';
+	const headerRow = '│ ' + Array.from({ length: colCount }, (_, i) => pad(header[i] || '', colWidths[i] ?? 0)).join(' │ ') + ' │';
 	const midBorder = '├' + colWidths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤';
 	const dataRows = rows.map(
-		(r) => '│ ' + Array.from({ length: colCount }, (_, i) => pad(r[i] || '', colWidths[i])).join(' │ ') + ' │'
+		(r) => '│ ' + Array.from({ length: colCount }, (_, i) => pad(r[i] || '', colWidths[i] ?? 0)).join(' │ ') + ' │'
 	);
 	const botBorder = '└' + colWidths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘';
 
@@ -267,7 +268,20 @@ export function convertMarkdownTablesToAscii(text: string): string {
 
 export interface RichBlock {
 	type: string;
-	[key: string]: any;
+	[key: string]: unknown;
+}
+
+/**
+ * `marked.lexer` returns `Token[]`, a union that includes `Tokens.Generic` —
+ * the `any`-indexed shape extensions emit — so narrowing on `token.type` alone
+ * never removes it. The core block tokens handled here are all `MarkedToken`s;
+ * discriminate with this guard instead of losing the type information.
+ */
+function isTokenType<T extends MarkedToken['type']>(
+	token: Token,
+	type: T
+): token is Extract<MarkedToken, { type: T }> {
+	return token.type === type;
 }
 
 export function markdownToRichBlocks(markdownText: string): RichBlock[] {
@@ -275,13 +289,13 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 	const blocks: RichBlock[] = [];
 
 	for (const token of tokens) {
-		if (token.type === 'heading') {
+		if (isTokenType(token, 'heading')) {
 			blocks.push({
 				type: 'heading',
 				text: token.text,
 				size: Math.min(6, Math.max(1, token.depth)),
 			});
-		} else if (token.type === 'paragraph') {
+		} else if (isTokenType(token, 'paragraph')) {
 			blocks.push({
 				type: 'paragraph',
 				text: token.text,
@@ -290,13 +304,13 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 			continue;
 		} else if (token.type === 'hr') {
 			blocks.push({ type: 'divider' });
-		} else if (token.type === 'code') {
+		} else if (isTokenType(token, 'code')) {
 			blocks.push({
 				type: 'pre',
 				text: token.text,
 				language: token.lang || undefined,
 			});
-		} else if (token.type === 'blockquote') {
+		} else if (isTokenType(token, 'blockquote')) {
 			// Bot API 10.3: long quotations collapse behind an expand control
 			// instead of pushing the rest of the answer off the screen.
 			if (token.text.length > 300) {
@@ -310,8 +324,8 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 					blocks: [{ type: 'paragraph', text: token.text }],
 				});
 			}
-		} else if (token.type === 'list') {
-			const items = (token.items || []).map((item: any) => ({
+		} else if (isTokenType(token, 'list')) {
+			const items = (token.items || []).map((item) => ({
 				label: item.text,
 				blocks: [{ type: 'paragraph', text: item.text }],
 			}));
@@ -319,15 +333,15 @@ export function markdownToRichBlocks(markdownText: string): RichBlock[] {
 				type: 'list',
 				items,
 			});
-		} else if (token.type === 'table') {
-			const headerCells = (token.header || []).map((h: any) => ({
+		} else if (isTokenType(token, 'table')) {
+			const headerCells = (token.header || []).map((h) => ({
 				text: h.text,
 				is_header: true,
 				align: h.align || 'left',
 				valign: 'top',
 			}));
-			const rows = (token.rows || []).map((row: any) =>
-				row.map((cell: any) => ({
+			const rows = (token.rows || []).map((row) =>
+				row.map((cell) => ({
 					text: cell.text,
 					align: cell.align || 'left',
 					valign: 'top',
@@ -447,7 +461,7 @@ export async function markdownToMarkdownV2(s: string): Promise<string> {
 	const parsed = await marked.parse(s, { renderer });
 
 	// Trim multiple newlines
-	return (parsed as string).replace(/\n{3,}/g, '\n\n').trim();
+	return parsed.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
@@ -592,7 +606,7 @@ export interface Environment {
 	R2: R2Bucket;
 	CONVERSATION_HISTORY: KVNamespace;
 	AI_WORKFLOW: Fetcher;
-	STREAM_WORKFLOW: any;
+	STREAM_WORKFLOW: Workflow;
 	TAVILY_API_KEY?: string;
 	Sandbox: DurableObjectNamespace<Sandbox>;
 	/** Authoritative, serialized per-user balance ledger. */
@@ -615,8 +629,7 @@ export interface Tool {
 	name: string;
 	description: string;
 	parameters: Record<string, unknown>;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	function: (args: any) => Promise<unknown>;
+	function: (args: unknown) => Promise<unknown>;
 }
 
 export interface NormalizedToolCall {
@@ -626,7 +639,7 @@ export interface NormalizedToolCall {
 }
 
 export interface ChatMessage {
-	role: 'system' | 'user' | 'assistant' | 'tool' | string;
+	role: string;
 	content?: string;
 	tool_calls?: NormalizedToolCall[];
 	tool_call_id?: string;
@@ -707,6 +720,46 @@ export interface AiResponse {
 
 type ExtractInput = string | AiResponse | Record<string, unknown> | null | undefined;
 
+/**
+ * Loosely-typed views of the provider payloads the extractors below probe.
+ *
+ * `ExtractInput` is a string, an `AiResponse`, or unvalidated JSON, so every
+ * field is checked at runtime. These views name the shape the probes assume,
+ * including the fields the code returns unchecked, which are typed as the
+ * value it hands back.
+ */
+interface LooseDelta {
+	content?: string;
+	text?: string;
+	reasoning_content?: string;
+	thought?: string;
+	[key: string]: unknown;
+}
+
+interface LooseChoice {
+	delta?: LooseDelta;
+	message?: LooseDelta;
+	text?: string;
+}
+
+interface LoosePart {
+	thought?: boolean;
+	text?: string;
+}
+
+interface LooseResponse {
+	response?: string;
+	text?: string;
+	content?: string;
+	delta?: string | LooseDelta;
+	choices?: LooseChoice[];
+	candidates?: { content?: { parts?: LoosePart[] } }[];
+	parts?: LoosePart[];
+}
+
+/** `LooseResponse` for the streaming paths, where `delta` is always an object. */
+type LooseStreamResponse = Omit<LooseResponse, 'delta'> & { delta?: LooseDelta };
+
 export const THINK_TAGS = ['think', 'thinking', 'reasoning', 'reflection', 'thought', 'analysis'];
 export const THINK_BLOCK_RE = new RegExp(
 	`<(?:${THINK_TAGS.join('|')})(?:\\s[^>]*)?>[\\s\\S]*?</(?:${THINK_TAGS.join('|')})>`,
@@ -733,7 +786,7 @@ export function extractText(obj: ExtractInput, includeReasoning = false): string
 	if (typeof obj === 'string') return obj;
 	if (!obj || typeof obj !== 'object') return '';
 
-	const response = obj as any;
+	const response = obj as LooseResponse;
 
 	// Prioritize direct fields
 	if (response.response && typeof response.response === 'string') return response.response;
@@ -811,7 +864,7 @@ export function normalizeToolArguments(raw: unknown): string {
 
 export function extractThinking(obj: ExtractInput): string {
 	if (!obj || typeof obj !== 'object') return '';
-	const response = obj as any;
+	const response = obj as LooseStreamResponse;
 
 	if (response.delta?.thought && typeof response.delta.thought === 'string') return response.delta.thought;
 
@@ -843,7 +896,7 @@ export function extractThinking(obj: ExtractInput): string {
 
 export function extractReasoning(obj: ExtractInput): string {
 	if (!obj || typeof obj !== 'object') return '';
-	const response = obj as any;
+	const response = obj as LooseStreamResponse;
 
 	if (response.delta?.reasoning_content && typeof response.delta.reasoning_content === 'string') return response.delta.reasoning_content;
 
