@@ -720,6 +720,46 @@ export interface AiResponse {
 
 type ExtractInput = string | AiResponse | Record<string, unknown> | null | undefined;
 
+/**
+ * Loosely-typed views of the provider payloads the extractors below probe.
+ *
+ * `ExtractInput` is a string, an `AiResponse`, or unvalidated JSON, so every
+ * field is checked at runtime. These views name the shape the probes assume,
+ * including the fields the code returns unchecked, which are typed as the
+ * value it hands back.
+ */
+interface LooseDelta {
+	content?: string;
+	text?: string;
+	reasoning_content?: string;
+	thought?: string;
+	[key: string]: unknown;
+}
+
+interface LooseChoice {
+	delta?: LooseDelta;
+	message?: LooseDelta;
+	text?: string;
+}
+
+interface LoosePart {
+	thought?: boolean;
+	text?: string;
+}
+
+interface LooseResponse {
+	response?: string;
+	text?: string;
+	content?: string;
+	delta?: string | LooseDelta;
+	choices?: LooseChoice[];
+	candidates?: { content?: { parts?: LoosePart[] } }[];
+	parts?: LoosePart[];
+}
+
+/** `LooseResponse` for the streaming paths, where `delta` is always an object. */
+type LooseStreamResponse = Omit<LooseResponse, 'delta'> & { delta?: LooseDelta };
+
 export const THINK_TAGS = ['think', 'thinking', 'reasoning', 'reflection', 'thought', 'analysis'];
 export const THINK_BLOCK_RE = new RegExp(
 	`<(?:${THINK_TAGS.join('|')})(?:\\s[^>]*)?>[\\s\\S]*?</(?:${THINK_TAGS.join('|')})>`,
@@ -746,7 +786,7 @@ export function extractText(obj: ExtractInput, includeReasoning = false): string
 	if (typeof obj === 'string') return obj;
 	if (!obj || typeof obj !== 'object') return '';
 
-	const response = obj as any;
+	const response = obj as LooseResponse;
 
 	// Prioritize direct fields
 	if (response.response && typeof response.response === 'string') return response.response;
@@ -824,7 +864,7 @@ export function normalizeToolArguments(raw: unknown): string {
 
 export function extractThinking(obj: ExtractInput): string {
 	if (!obj || typeof obj !== 'object') return '';
-	const response = obj as any;
+	const response = obj as LooseStreamResponse;
 
 	if (response.delta?.thought && typeof response.delta.thought === 'string') return response.delta.thought;
 
@@ -856,7 +896,7 @@ export function extractThinking(obj: ExtractInput): string {
 
 export function extractReasoning(obj: ExtractInput): string {
 	if (!obj || typeof obj !== 'object') return '';
-	const response = obj as any;
+	const response = obj as LooseStreamResponse;
 
 	if (response.delta?.reasoning_content && typeof response.delta.reasoning_content === 'string') return response.delta.reasoning_content;
 
