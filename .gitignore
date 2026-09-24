@@ -20,3 +20,6 @@ docs/
 repomix-*.txt
 repomix-*.xml
 .antigravitycli
+
+# Agent worktrees
+.worktrees/
