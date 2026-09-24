@@ -11,6 +11,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '../../.gitignore');
 
 
 export default defineConfig(
+	{ ignores: ['eslint.config.js'] },
 	includeIgnoreFile(gitignorePath),
 	js.configs.recommended,
 	ts.configs.recommendedTypeChecked,
