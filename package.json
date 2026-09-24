@@ -16,6 +16,8 @@
 		"ncu": "npx npm-check-updates -u --root",
 		"ncu:interactive": "npx npm-check-updates -i --root",
 		"typecheck": "npm run check --workspaces --if-present",
+		"lint": "npm run lint --workspaces --if-present",
+		"lint:fix": "npm run lint:fix --workspaces --if-present",
 		"prepare": "./setup_hooks.sh"
 	},
 	"author": "codebam",

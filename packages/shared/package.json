@@ -5,7 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"build": "tsc",
-		"check": "tsc --noEmit"
+		"check": "tsc --noEmit",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix"
 	},
 	"exports": {
 		".": "./src/index.ts"
@@ -13,7 +15,13 @@
 	"devDependencies": {
 		"@cloudflare/sandbox": "^0.12.9",
 		"@cloudflare/workers-types": "^5.20260922.1",
-		"typescript": "^6.0.3"
+		"@eslint/compat": "^2.1.1",
+		"@eslint/js": "^10.0.1",
+		"eslint": "^10.11.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.12.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.70.1"
 	},
 	"dependencies": {
 		"marked": "^18.0.13"

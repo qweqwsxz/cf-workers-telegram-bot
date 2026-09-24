@@ -11,7 +11,7 @@ typecheck:
 	npm run typecheck
 
 lint:
-	cd webapp && npm run lint
+	npm run lint
 
 # Production release: tags the current commit and pushes (see scripts/release.sh).
 # Usage: make release ARGS="both"  /  make release ARGS="bot -m 'fix reason'"

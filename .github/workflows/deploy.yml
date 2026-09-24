@@ -33,8 +33,8 @@ jobs:
         run: npm run check --workspace bot
       - name: Typecheck webapp
         run: npm run check --workspace webapp
-      - name: Lint webapp
-        run: npm run lint --workspace webapp
+      - name: Lint
+        run: npm run lint
       - name: Test webapp (server)
         run: npm run test --workspace webapp
 
