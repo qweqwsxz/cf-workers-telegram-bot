@@ -629,7 +629,12 @@ export interface Tool {
 	name: string;
 	description: string;
 	parameters: Record<string, unknown>;
-	function: (args: unknown) => Promise<unknown>;
+	// Declared with method syntax on purpose: tools are a heterogeneous
+	// collection whose arguments arrive as parsed JSON, so each implementation
+	// narrows its own parameters while the caller passes an `unknown` payload.
+	// Method syntax keeps parameter checking bivariant (as the previous `any`
+	// did) without putting `any` in the signature.
+	function(args: unknown): Promise<unknown>;
 }
 
 export interface NormalizedToolCall {
