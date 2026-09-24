@@ -111,6 +111,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 		let result = '';
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
+			if (!item) continue;
 			const prefix = ordered
 				? `${start !== '' && start !== undefined ? Number(start) + i : i + 1}\\. `
 				: '• ';
@@ -168,7 +169,7 @@ export async function markdownToHtml(s: string): Promise<string> {
 		];
 		const match = /^<\/?([a-z0-9-]+)(?:\s+[^>]*)?>/i.exec(text);
 		if (match) {
-			const tagName = match[1].toLowerCase();
+			const tagName = match[1]?.toLowerCase() ?? '';
 			if (allowedTags.includes(tagName)) {
 				return text; // Allow through
 			}
@@ -246,14 +247,15 @@ export function convertMarkdownTablesToAscii(text: string): string {
 			const tableRegex = /((?:^[ \t]*\|[^\n]+\|[ \t]*\r?\n){2,}(?:[ \t]*\|[^\n]+\|[ \t]*\r?\n?)*)/gm;
 			return part.replace(tableRegex, (match) => {
 				const lines = match.trim().split(/\r?\n/).filter((line) => line.trim().startsWith('|'));
-				if (lines.length < 2) return match;
+				const [headerLine, separatorLine] = lines;
+				if (!headerLine || !separatorLine) return match;
 
-				const isSeparator = /^\|(?:\s*:?-+:?\s*\|)+$/.test(lines[1].trim());
+				const isSeparator = /^\|(?:\s*:?-+:?\s*\|)+$/.test(separatorLine.trim());
 				if (!isSeparator) return match;
 
 				const parseRow = (row: string) => row.split('|').slice(1, -1).map((c) => c.trim());
 
-				const header = parseRow(lines[0]);
+				const header = parseRow(headerLine);
 				const dataRows = lines.slice(2).map(parseRow);
 
 				const asciiTable = formatTableAsAscii(header, dataRows);
@@ -380,6 +382,7 @@ export async function markdownToMarkdownV2(s: string): Promise<string> {
 		let result = '';
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
+			if (!item) continue;
 			const prefix = ordered
 				? `${start !== '' && start !== undefined ? Number(start) + i : i + 1}\\. `
 				: '• ';
