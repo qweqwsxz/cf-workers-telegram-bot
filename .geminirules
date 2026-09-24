@@ -24,11 +24,15 @@ To ensure the highest code quality, maintainability, and correctness, you must s
 Before proposing any change as complete or claiming it works, you MUST verify the changes compile and run correctly.
 - **Check shared packages**:
   `npm run check --prefix packages/shared`
+  `npm run lint --prefix packages/shared`
 - **Check Telegram bot worker**:
   `npm run check --prefix bot`
+  `npm run lint --prefix bot`
 - **Check webapp (Svelte/Vite)**:
   `npm run check --prefix webapp`
   `npm run lint --prefix webapp`
+- **Lint every workspace at once**:
+  `npm run lint`
 - **Full Build check**:
   `npm run build`
 - **Testing**:
